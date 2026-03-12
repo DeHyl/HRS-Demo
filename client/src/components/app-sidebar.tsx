@@ -36,7 +36,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
-import logoPath from "/logo.svg";
 import type { NavigationSetting } from "@shared/schema";
 
 const mainNavItems = [
@@ -171,7 +170,15 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <Link href="/dashboard">
-          <img src={logoPath} alt="BSA Solutions" className="h-16" />
+          <div className="flex items-center gap-2 py-1">
+            <div className="flex gap-0.5">
+              <div className="w-3 h-3 rounded-sm bg-[#EF4444]" />
+              <div className="w-3 h-3 rounded-sm bg-[#EAB308]" />
+              <div className="w-3 h-3 rounded-sm bg-[#3B82F6]" />
+            </div>
+            <span className="font-bold text-base tracking-tight">GameTime.ai</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5 pl-0.5">Lead Intel</p>
         </Link>
       </SidebarHeader>
       <SidebarContent>

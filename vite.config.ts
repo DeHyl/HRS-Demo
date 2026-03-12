@@ -31,6 +31,10 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  cacheDir: process.platform === "win32" ? "C:/vite-cache/hrs-demo" : ".vite-cache",
+  optimizeDeps: {
+    include: ["@react-three/fiber", "@react-three/drei", "three"],
+  },
   server: {
     fs: {
       strict: true,

@@ -119,10 +119,10 @@ export async function registerRoutes(
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: true, // Always use secure cookies
+        secure: process.env.NODE_ENV === "production", // HTTPS only in production
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: "lax", // Lax for Replit iframe compatibility
+        sameSite: "lax",
       },
     })
   );

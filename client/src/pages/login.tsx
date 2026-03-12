@@ -6,11 +6,10 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import logoPath from "/logo.svg";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -19,21 +18,36 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+function GametimeLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const sq = size === "lg" ? "w-4 h-4" : size === "sm" ? "w-2 h-2" : "w-3 h-3";
+  const text = size === "lg" ? "text-2xl" : size === "sm" ? "text-sm" : "text-lg";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex gap-0.5">
+        <div className={`${sq} rounded-sm`} style={{ backgroundColor: "#EF4444" }} />
+        <div className={`${sq} rounded-sm`} style={{ backgroundColor: "#EAB308" }} />
+        <div className={`${sq} rounded-sm`} style={{ backgroundColor: "#3B82F6" }} />
+      </div>
+      <span className={`text-white font-bold ${text} tracking-tight`}>GameTime.ai</span>
+    </div>
+  );
+}
+
 function AnimatedBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[#1a2744]" />
-      {Array.from({ length: 60 }).map((_, i) => (
+      <div className="absolute inset-0 bg-black" />
+      {Array.from({ length: 50 }).map((_, i) => (
         <div
           key={i}
           className="absolute rounded-full"
           style={{
-            width: `${Math.random() * 3 + 1}px`,
-            height: `${Math.random() * 3 + 1}px`,
-            backgroundColor: Math.random() > 0.7 ? "#F26419" : "#2C88C9",
-            left: `${Math.random() * 50}%`,
+            width: `${Math.random() * 2 + 1}px`,
+            height: `${Math.random() * 2 + 1}px`,
+            backgroundColor: Math.random() > 0.6 ? "#4A6CF7" : "#ffffff",
+            left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            opacity: Math.random() * 0.5 + 0.2,
+            opacity: Math.random() * 0.3 + 0.1,
             animation: `twinkle ${2 + Math.random() * 4}s ease-in-out infinite`,
             animationDelay: `${Math.random() * 3}s`,
           }}
@@ -41,8 +55,8 @@ function AnimatedBackground() {
       ))}
       <style>{`
         @keyframes twinkle {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 0.8; }
+          0%, 100% { opacity: 0.1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
     </div>
@@ -58,20 +72,14 @@ export default function LoginPage() {
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
+      toast({ title: "Welcome back!", description: "You have successfully logged in." });
       setLocation("/dashboard");
     } catch (error) {
       toast({
@@ -86,40 +94,68 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
+      {/* Left panel — Gametime brand */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <AnimatedBackground />
-        {/* Texture overlays */}
-        <div className="absolute inset-0 bg-gradient-mesh z-[1]" />
-        <div className="absolute inset-0 bg-dots opacity-20 z-[2]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#2a2a2a] via-transparent to-[#2a2a2a]/30 z-[3]" />
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8">
-          <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-3xl px-14 py-12 shadow-2xl animate-scale-in">
-            <h1 className="text-5xl xl:text-6xl font-display font-bold text-white mb-4 tracking-tighter text-center">
-              Lead Intel
+        <div className="absolute inset-0 flex flex-col z-10 p-10">
+          <GametimeLogo size="md" />
+
+          <div className="flex-1 flex flex-col items-start justify-center max-w-md">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8">
+              <div className="flex gap-0.5">
+                <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#EF4444" }} />
+                <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#EAB308" }} />
+                <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#3B82F6" }} />
+              </div>
+              <span className="text-white/60 text-xs">A product by GroundGame</span>
+            </div>
+
+            <h1 className="text-5xl xl:text-6xl font-display font-black text-white mb-4 tracking-tighter leading-none">
+              Lead<br />
+              <span style={{ color: "#4A6CF7" }}>Intel</span>
             </h1>
-            <p className="text-lg xl:text-xl text-white/70 max-w-md text-center font-sans">
-              AI-Powered Pre-Call Intelligence for Sales Teams
+            <p className="text-lg text-white/50 font-sans leading-relaxed mb-10">
+              AI-powered pre-call intelligence that makes every rep unstoppable.
             </p>
+
+            {/* Feature cards mini */}
+            <div className="grid grid-cols-2 gap-3 w-full">
+              {[
+                { label: "Smart Call Queue", color: "#3B82F6" },
+                { label: "AI Call Analysis", color: "#3B82F6" },
+                { label: "SDR Leaderboard", color: "#EAB308" },
+                { label: "Manager Dashboard", color: "#EF4444" },
+              ].map((f) => (
+                <div key={f.label} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                  <div className="w-6 h-0.5 mb-2 rounded-full" style={{ backgroundColor: f.color }} />
+                  <p className="text-white/80 text-xs font-medium">{f.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          <p className="text-white/20 text-xs">© 2026 GroundGame. All rights reserved.</p>
         </div>
       </div>
 
+      {/* Right panel — login form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-background relative">
-        {/* Subtle background texture */}
         <div className="absolute inset-0 bg-dots opacity-[0.02]" />
 
         <div className="w-full max-w-md relative z-10">
-          <div className="mb-12 text-center lg:text-left animate-fade-in-down">
-            <img src={logoPath} alt="BSA Solutions" className="h-12 mx-auto lg:mx-0 mb-8" />
-            <h2 className="text-4xl font-display font-bold text-foreground mb-3 tracking-tight">Welcome back</h2>
+          <div className="mb-10 text-center lg:text-left animate-fade-in-down">
+            <div className="flex items-center gap-2 mb-2 justify-center lg:justify-start lg:hidden">
+              <GametimeLogo size="sm" />
+            </div>
+            <h2 className="text-4xl font-display font-bold text-foreground mb-2 tracking-tight">Welcome back</h2>
             <p className="text-lg text-muted-foreground">Sign in to access your dashboard</p>
           </div>
 
           <Card className="border-0 lg:border lg:border-border/50 lg:shadow-xl lg:bg-card/95 lg:backdrop-blur-sm rounded-2xl animate-fade-in-up">
             <CardContent className="pt-6 lg:pt-8 px-0 lg:px-8">
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-2 animate-fade-in-up animate-stagger-1">
+                <div className="space-y-2">
                   <Label htmlFor="email" className="text-base font-medium">Email</Label>
                   <Input
                     id="email"
@@ -135,11 +171,11 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <div className="space-y-2 animate-fade-in-up animate-stagger-2">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-base font-medium">Password</Label>
-                    <Link 
-                      href="/forgot-password" 
+                    <Link
+                      href="/forgot-password"
                       className="text-sm text-primary hover:text-primary/80 hover:underline transition-colors"
                       data-testid="link-forgot-password"
                     >
@@ -173,7 +209,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   variant="cta"
-                  className="w-full h-12 text-base animate-fade-in-up animate-stagger-3"
+                  className="w-full h-12 text-base"
                   disabled={isLoading}
                   data-testid="button-submit"
                 >
@@ -188,7 +224,7 @@ export default function LoginPage() {
                 </Button>
               </form>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 pt-6 px-0 lg:px-8 lg:pb-8 animate-fade-in animate-stagger-4">
+            <CardFooter className="flex flex-col gap-4 pt-6 px-0 lg:px-8 lg:pb-8">
               <div className="text-center text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <Link href="/signup" className="text-primary hover:text-primary/80 hover:underline font-semibold transition-colors" data-testid="link-signup">

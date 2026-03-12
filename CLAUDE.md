@@ -1,7 +1,7 @@
 # CLAUDE.md - AI Assistant Guide for Lead Intel
 
-> **Last Updated:** January 22, 2026
-> **Repository:** BSA-demo
+> **Last Updated:** March 11, 2026
+> **Repository:** HRS-Demo (fork of BSA-demo)
 > **Type:** Full-stack TypeScript monorepo (React + Express.js)
 
 This document provides comprehensive guidance for AI assistants working on the Lead Intel codebase. It covers project structure, development workflows, key conventions, and common tasks.
@@ -25,6 +25,7 @@ This document provides comprehensive guidance for AI assistants working on the L
 13. [Key Files Reference](#key-files-reference)
 14. [Multi-Agent System](#multi-agent-system)
 15. [Ralph Iterative Development](#ralph-iterative-development)
+16. [Continuous Reflection & Best Practices](#continuous-reflection--best-practices)
 
 ---
 
@@ -2383,6 +2384,71 @@ git push -u origin claude/branch-name-sessionId
 # style: formatting changes
 # test: test additions
 ```
+
+---
+
+## Continuous Reflection & Best Practices
+
+> This section is a **living document**. After every meaningful conversation or implementation session, the AI assistant should reflect on what was learned and update this section with new patterns, pitfalls, and confirmed best practices. This prevents repeating mistakes and builds institutional knowledge across sessions.
+
+### How to Update This Section
+
+At the end of each session (or when a significant insight is gained), the AI should:
+
+1. **Identify** what was confirmed, disproved, or newly discovered
+2. **Categorize** the insight (Architecture, AI, Database, Frontend, Workflow, etc.)
+3. **Add it below** under the appropriate subsection — concise, actionable entries only
+4. **Remove or update** entries that turn out to be incorrect in future sessions
+
+---
+
+### Vibe Coding Sales Engine — Agent Gap Analysis (March 2026)
+
+From exploring the codebase against the "Vibe Coding Strategy" (3-agent SDR automation pipeline):
+
+**Confirmed Architecture State:**
+- The **Dossier Agent** is 95% complete — `generateLeadDossier()` in `server/ai/leadResearch.ts` already does multi-source scraping + Claude Opus 4 analysis with hook, talk track, product matching, and fit score
+- The **Scrubbing Agent** is 70% complete — scoring logic exists in `leadResearch.ts` but there is no lightweight batch endpoint; full dossier generation is required today (expensive for bulk filtering)
+- The **Handoff Agent** is 70% complete — BANT extraction and Salesforce handover work, but there is no Microsoft Teams integration anywhere in the codebase
+
+**Critical Missing Integration:**
+- **Microsoft Teams** — No Teams webhook, no Teams Bot, no external notification beyond in-app WebSocket. Gmail exists via `server/google/gmailClient.ts`. Teams Incoming Webhook is the fastest path to fix this.
+
+**Schema Gaps to Remember:**
+- `leads` table has no `companyDescription` field (only `companyIndustry` as free text)
+- `leads` table has no `disqualificationReason` field
+- Research packets have `verificationStatus` (string) but no numeric confidence score
+- No agent attribution field — can't tell which AI agent generated which analysis
+
+**Key File Locations (confirmed):**
+- Lead dossier generation: `server/ai/leadResearch.ts` (`generateLeadDossier()`)
+- BANT extraction: `server/ai/bantExtraction.ts`
+- Salesforce handover: `server/integrations/salesforceLeads.ts` (`handoverToSalesforce()`)
+- In-app notifications: `server/notificationService.ts`
+- Multi-agent director: `server/agents/director.ts`
+
+---
+
+### General Best Practices (Updated Continuously)
+
+**AI Modules:**
+- Always use `callClaudeWithRetry()` from `server/ai/claudeClient.ts` — it has retry logic and error handling built in
+- Gemini Flash for fast/cheap tasks (coaching tips, simple extraction); Claude Opus for high-stakes analysis (dossier, coaching)
+- Always request structured JSON output from AI and wrap `JSON.parse()` in try/catch with a fallback
+
+**Database:**
+- Use `getAllLeadsWithResearch()` instead of two separate queries — it's a single optimized JOIN
+- Schema changes require `npm run db:push` after editing `shared/schema.ts`
+- JSON columns (`dossierJson`, `painPointsJson`, etc.) use `jsonb` type — query with Drizzle's `jsonb` operators for filtering
+
+**Routes:**
+- Route files are split by domain: `leads-routes.ts`, `coach-routes.ts`, `salesforce-routes.ts`, `zoom-routes.ts` — add new endpoints to the relevant file, not to the monolithic `routes.ts`
+- Always use `requireAuth` middleware; use `requireRole()` for manager/admin-only endpoints
+
+**Frontend:**
+- Use `credentials: 'include'` on every `fetch()` call — sessions are cookie-based
+- Invalidate React Query cache with `queryClient.invalidateQueries()` after mutations
+- Use `cn()` from `@/lib/utils` for conditional Tailwind classes
 
 ---
 

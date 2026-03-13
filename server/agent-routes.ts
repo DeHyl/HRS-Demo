@@ -16,6 +16,8 @@ import {
   AGENT_CONFIG
 } from './agents/index.js';
 import { storage } from './storage.js';
+import { processLeadResearch } from './leads-routes.js';
+import { notifyResearchComplete } from './dashboardUpdates.js';
 
 // Authentication middleware (reuse from routes.ts pattern)
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -258,6 +260,67 @@ export function registerAgentRoutes(app: Express) {
 
     const actions = quickActions[role] || quickActions.sdr;
     res.json({ quickActions: actions });
+  });
+
+  /**
+   * POST /api/agents/dossier/:leadId
+   * Dossier Agent — runs pre-call research for a single lead.
+   * Wraps processLeadResearch() with agent metadata in the response.
+   *
+   * Body (optional):
+   *   mode: 'fast' | 'deep'  — default 'fast'
+   *   forceRefresh: boolean   — default false
+   */
+  app.post('/api/agents/dossier/:leadId', requireAuth, async (req: Request, res: Response) => {
+    const startedAt = Date.now();
+    try {
+      const leadId = req.params.leadId;
+      const lead = await storage.getLead(leadId);
+      if (!lead) {
+        return res.status(404).json({ message: 'Lead not found' });
+      }
+
+      const { mode = 'fast', forceRefresh = false } = req.body as {
+        mode?: 'fast' | 'deep';
+        forceRefresh?: boolean;
+      };
+
+      const userId = req.session!.userId;
+
+      const result = await processLeadResearch(lead, {
+        forceRefresh,
+        notifyUserId: userId,
+        researchMode: mode,
+      });
+
+      if (!result.success && !result.packet) {
+        return res.status(500).json({ message: 'Dossier Agent: research failed' });
+      }
+
+      if (!result.isExisting && userId) {
+        notifyResearchComplete(leadId, userId);
+      }
+
+      const durationMs = Date.now() - startedAt;
+
+      res.json({
+        agent: 'dossier',
+        model: 'claude-opus-4-20250514',
+        leadId,
+        companyName: lead.companyName,
+        contactName: lead.contactName,
+        mode: result.researchMode || mode,
+        isExisting: result.isExisting ?? false,
+        durationMs,
+        dossier: result.packet,
+      });
+    } catch (error) {
+      console.error('[DossierAgent] Error:', error);
+      res.status(500).json({
+        message: 'Dossier Agent failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   });
 
   console.log('[AgentRoutes] Agent routes registered');

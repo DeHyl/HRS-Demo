@@ -23,7 +23,7 @@ const researchLimit = pLimit(2);
 const researchInProgress = new Set<string>();
 
 // Shared helper for processing lead research with all guardrails
-async function processLeadResearch(
+export async function processLeadResearch(
   lead: Lead,
   options: { forceRefresh?: boolean; notifyUserId?: string; researchMode?: 'fast' | 'deep'; researchSources?: ResearchOptions['sources'] } = {}
 ): Promise<{ success: boolean; packet?: any; isExisting?: boolean; researchMode?: 'fast' | 'deep' }> {

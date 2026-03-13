@@ -195,6 +195,25 @@ export default function LeadsPage() {
     },
   });
 
+  const scrubMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/agents/scrub/bulk", {
+        filter: { status: "new" },
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({
+        title: `Scrub complete — ${data.processed} leads scored`,
+        description: `${data.qualified} qualified (${data.byPriority?.hot ?? 0} hot, ${data.byPriority?.warm ?? 0} warm) · ${data.disqualified} disqualified · avg score ${data.avgFitScore}`,
+      });
+    },
+    onError: () => {
+      toast({ title: "Scrub failed", description: "Could not score leads", variant: "destructive" });
+    },
+  });
+
   const handoffMutation = useMutation({
     mutationFn: async ({ leadId, data }: { leadId: string; data: typeof qualifyData }) => {
       const res = await apiRequest("PATCH", `/api/leads/${leadId}`, {
@@ -282,6 +301,20 @@ export default function LeadsPage() {
           <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)} data-testid="button-import-leads">
             <Upload className="h-4 w-4 mr-2" />
             Import
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scrubMutation.mutate()}
+            disabled={scrubMutation.isPending}
+            data-testid="button-scrub-leads"
+          >
+            {scrubMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            {scrubMutation.isPending ? "Scrubbing..." : "Scrub New"}
           </Button>
         </div>
       </div>

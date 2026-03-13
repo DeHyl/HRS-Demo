@@ -96,6 +96,11 @@ export default function LeadsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
   const [showProspectorModal, setShowProspectorModal] = useState(false);
+  const [prospectorResults, setProspectorResults] = useState<null | {
+    inserted: number; discovered: number; qualified: number; skipped: number; durationMs: number;
+    insertedLeads: Array<{ id: string; companyName: string; companyIndustry: string; contactName: string; contactTitle?: string; contactEmail?: string; fitScore: number; priority: string; companyWebsite?: string }>;
+    results: Array<{ companyName: string; companyIndustry: string; contactName: string | null; fitScore: number; priority: string; reasoning: string; qualifies: boolean }>;
+  }>(null);
   const [prospectorForm, setProspectorForm] = useState({
     industry: "Aerospace & Defense",
     location: "",
@@ -243,21 +248,7 @@ export default function LeadsPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      setShowProspectorModal(false);
-      if (data.inserted === 0) {
-        toast({
-          title: `Prospector found ${data.discovered} companies`,
-          description: data.discovered === 0
-            ? "No companies matched your search. Try a broader industry or lower the min score."
-            : `${data.qualified} passed scoring but none were inserted. Lower the Min Fit Score (try 30) or broaden the industry.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: `Prospector — ${data.inserted} new leads added`,
-          description: `Searched ${data.discovered} companies · ${data.qualified} qualified · ${data.skipped} below threshold`,
-        });
-      }
+      setProspectorResults(data);
     },
     onError: () => {
       toast({ title: "Prospector failed", description: "Could not find leads", variant: "destructive" });
@@ -634,101 +625,179 @@ export default function LeadsPage() {
       <AddLeadModal open={showAddLeadModal} onOpenChange={setShowAddLeadModal} />
 
       {/* Prospector Agent Modal */}
-      <Dialog open={showProspectorModal} onOpenChange={setShowProspectorModal}>
-        <DialogContent className="max-w-md">
+      <Dialog open={showProspectorModal} onOpenChange={(open) => { setShowProspectorModal(open); if (!open) setProspectorResults(null); }}>
+        <DialogContent className={prospectorResults ? "max-w-2xl" : "max-w-md"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Search className="h-5 w-5 text-primary" />
-              Find New Leads
+              {prospectorResults ? "Prospector Results" : "Find New Leads"}
             </DialogTitle>
             <DialogDescription>
-              The Prospector Agent searches Google and LinkedIn for companies that match your criteria, scrapes their websites, and adds qualified leads automatically.
+              {prospectorResults
+                ? `${prospectorResults.inserted} leads added · ${prospectorResults.discovered} companies searched · ${Math.round(prospectorResults.durationMs / 1000)}s`
+                : "The Prospector Agent searches Google and LinkedIn for companies that match your criteria, scrapes their websites, and adds qualified leads automatically."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Industry *</label>
-              <Input
-                value={prospectorForm.industry}
-                onChange={e => setProspectorForm(f => ({ ...f, industry: e.target.value }))}
-                placeholder="e.g. Aerospace Manufacturing"
-              />
+
+          {prospectorResults ? (
+            /* ── Results view ── */
+            <div className="space-y-4">
+              {/* Summary bar */}
+              <div className="grid grid-cols-4 gap-2 text-center">
+                {[
+                  { label: "Discovered", value: prospectorResults.discovered, color: "text-foreground" },
+                  { label: "Qualified", value: prospectorResults.qualified, color: "text-blue-600" },
+                  { label: "Added", value: prospectorResults.inserted, color: "text-green-600" },
+                  { label: "Skipped", value: prospectorResults.skipped, color: "text-muted-foreground" },
+                ].map(s => (
+                  <div key={s.label} className="bg-muted/50 rounded-lg p-3">
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lead list */}
+              {prospectorResults.insertedLeads.length > 0 ? (
+                <ScrollArea className="h-72 rounded-md border">
+                  <div className="p-1">
+                    {prospectorResults.insertedLeads.map((lead) => (
+                      <div key={lead.id} className="flex items-start gap-3 p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">{lead.companyName}</span>
+                            <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              lead.priority === 'hot' ? 'bg-red-100 text-red-700' :
+                              lead.priority === 'warm' ? 'bg-orange-100 text-orange-700' :
+                              lead.priority === 'cool' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>{lead.priority}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {lead.contactName}
+                            {lead.contactTitle && ` · ${lead.contactTitle}`}
+                          </div>
+                          {lead.companyIndustry && (
+                            <div className="text-xs text-muted-foreground truncate">{lead.companyIndustry}</div>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-bold">{lead.fitScore}</div>
+                          <div className="text-xs text-muted-foreground">score</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                  <p className="text-sm font-medium">No leads were added</p>
+                  <p className="text-xs mt-1">
+                    {prospectorResults.discovered === 0
+                      ? "No companies found. Try a broader industry term."
+                      : "Companies were found but scored below your threshold. Lower Min Fit Score and try again."}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setProspectorResults(null)}>
+                  <Search className="h-4 w-4 mr-2" />
+                  New Search
+                </Button>
+                <Button className="flex-1" onClick={() => { setProspectorResults(null); setShowProspectorModal(false); }}>
+                  Done
+                </Button>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Location</label>
-              <Input
-                value={prospectorForm.location}
-                onChange={e => setProspectorForm(f => ({ ...f, location: e.target.value }))}
-                placeholder="e.g. California, United States"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          ) : (
+            /* ── Search form ── */
+            <div className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Company Size</label>
+                <label className="text-sm font-medium">Industry *</label>
                 <Input
-                  value={prospectorForm.companySize}
-                  onChange={e => setProspectorForm(f => ({ ...f, companySize: e.target.value }))}
-                  placeholder="e.g. 50-500"
+                  value={prospectorForm.industry}
+                  onChange={e => setProspectorForm(f => ({ ...f, industry: e.target.value }))}
+                  placeholder="e.g. Aerospace Manufacturing"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Min Fit Score</label>
+                <label className="text-sm font-medium">Location</label>
+                <Input
+                  value={prospectorForm.location}
+                  onChange={e => setProspectorForm(f => ({ ...f, location: e.target.value }))}
+                  placeholder="e.g. California, United States"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Company Size</label>
+                  <Input
+                    value={prospectorForm.companySize}
+                    onChange={e => setProspectorForm(f => ({ ...f, companySize: e.target.value }))}
+                    placeholder="e.g. 50-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Min Fit Score</label>
+                  <Input
+                    type="number"
+                    min={0} max={100}
+                    value={prospectorForm.minFitScore}
+                    onChange={e => setProspectorForm(f => ({ ...f, minFitScore: parseInt(e.target.value) || 40 }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Target Title</label>
+                <Input
+                  value={prospectorForm.contactTitle}
+                  onChange={e => setProspectorForm(f => ({ ...f, contactTitle: e.target.value }))}
+                  placeholder="e.g. Engineering Manager, VP Engineering"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Keywords <span className="text-muted-foreground font-normal">(comma separated)</span></label>
+                <Input
+                  value={prospectorForm.keywords}
+                  onChange={e => setProspectorForm(f => ({ ...f, keywords: e.target.value }))}
+                  placeholder="e.g. SolidWorks, Creo, CAD design"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Max Results</label>
                 <Input
                   type="number"
-                  min={0} max={100}
-                  value={prospectorForm.minFitScore}
-                  onChange={e => setProspectorForm(f => ({ ...f, minFitScore: parseInt(e.target.value) || 60 }))}
+                  min={1} max={50}
+                  value={prospectorForm.maxResults}
+                  onChange={e => setProspectorForm(f => ({ ...f, maxResults: parseInt(e.target.value) || 15 }))}
                 />
               </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => prospectorMutation.mutate(prospectorForm)}
+                  disabled={prospectorMutation.isPending || !prospectorForm.industry}
+                >
+                  {prospectorMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Prospecting...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Start Prospecting
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => setShowProspectorModal(false)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Target Title</label>
-              <Input
-                value={prospectorForm.contactTitle}
-                onChange={e => setProspectorForm(f => ({ ...f, contactTitle: e.target.value }))}
-                placeholder="e.g. Engineering Manager, VP Engineering"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Keywords <span className="text-muted-foreground font-normal">(comma separated)</span></label>
-              <Input
-                value={prospectorForm.keywords}
-                onChange={e => setProspectorForm(f => ({ ...f, keywords: e.target.value }))}
-                placeholder="e.g. SolidWorks, Creo, CAD design"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Max Results</label>
-              <Input
-                type="number"
-                min={1} max={50}
-                value={prospectorForm.maxResults}
-                onChange={e => setProspectorForm(f => ({ ...f, maxResults: parseInt(e.target.value) || 15 }))}
-              />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                className="flex-1"
-                onClick={() => prospectorMutation.mutate(prospectorForm)}
-                disabled={prospectorMutation.isPending || !prospectorForm.industry}
-              >
-                {prospectorMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Prospecting...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4 mr-2" />
-                    Start Prospecting
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={() => setShowProspectorModal(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
       

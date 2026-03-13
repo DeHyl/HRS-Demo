@@ -11,7 +11,7 @@ import {
   type ContactLinkedInData,
 } from "./websiteScraper";
 import { getKnowledgebaseContent, getLeadScoringParameters } from "../google/driveClient";
-import { callClaudeWithRetry, extractJsonFromResponse } from "./claudeClient";
+import { callClaudeWithRetry, extractJsonFromResponse, getClaudeClient } from "./claudeClient";
 import {
   calculateFitScorePenalties,
   applyScorePenalties,
@@ -816,5 +816,99 @@ export async function researchLead(
       deepResearch: preScraped.deepResearch
     },
     researchMode: mode
+  };
+}
+
+// ─── Scrubbing Agent ──────────────────────────────────────────────────────────
+
+export interface ScrubResult {
+  leadId: string;
+  companyName: string;
+  fitScore: number;
+  priority: 'hot' | 'warm' | 'cool' | 'cold';
+  qualifies: boolean;
+  disqualificationReason?: string;
+  reasoning: string;
+  durationMs: number;
+}
+
+/**
+ * Lightweight lead scoring using Claude Haiku — no web scraping, no external APIs.
+ * Takes only the data already in the lead record and returns a fit score + qualification decision.
+ * ~1-3 seconds per lead. Use before running the full Dossier Agent.
+ */
+export async function scrubLead(lead: Lead): Promise<ScrubResult> {
+  const startedAt = Date.now();
+
+  const prompt = `You are a lead qualification specialist for Hawk Ridge Systems (HRS), the leading reseller of SolidWorks, CATIA, 3D printing solutions, and engineering simulation software in North America.
+
+## ICP (Ideal Customer Profile)
+- Engineering teams using or evaluating CAD/PLM/simulation tools
+- Industries: Aerospace & Defense, Medical Devices, Automotive, Industrial Equipment, Electronics, Consumer Products
+- Company size: 10–5,000 employees
+- Pain: legacy CAD (AutoCAD, Inventor, Pro/E, NX, Creo), PDM/PLM chaos, slow product development cycles
+- Disqualify: retail, restaurants, real estate, non-profits, pure software companies with no physical product
+
+## Lead to Evaluate
+- Company: ${lead.companyName}
+- Industry: ${lead.companyIndustry || 'Unknown'}
+- Company Size: ${lead.companySize || 'Unknown'}
+- Contact: ${lead.contactName}
+- Title: ${lead.contactTitle || 'Unknown'}
+- Source: ${lead.source || 'manual'}
+- Description: ${lead.companyDescription || 'Not provided'}
+
+## Task
+Score this lead 0–100 and decide if it qualifies for outreach.
+
+Scoring guide:
+- 80–100: Perfect ICP match (engineering company, right industry, clear CAD/PLM need)
+- 60–79: Good fit, some signals missing
+- 40–59: Marginal fit, needs more info
+- 0–39: Poor fit, disqualify
+
+Return ONLY valid JSON (no markdown, no explanation outside the JSON):
+{
+  "fitScore": <0-100 integer>,
+  "priority": <"hot"|"warm"|"cool"|"cold">,
+  "qualifies": <true|false>,
+  "disqualificationReason": <string if qualifies=false, else null>,
+  "reasoning": <1-2 sentence explanation>
+}`;
+
+  const client = getClaudeClient();
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 300,
+    temperature: 0.2,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { type: 'text'; text: string }).text)
+    .join('');
+
+  let parsed: { fitScore: number; priority: string; qualifies: boolean; disqualificationReason?: string; reasoning: string };
+  try {
+    parsed = JSON.parse(text.trim());
+  } catch {
+    // Fallback if JSON parse fails
+    parsed = { fitScore: 50, priority: 'cool', qualifies: true, reasoning: 'Could not parse AI response — defaulting to manual review.' };
+  }
+
+  const priority = (['hot', 'warm', 'cool', 'cold'].includes(parsed.priority)
+    ? parsed.priority
+    : determinePriority(parsed.fitScore)) as 'hot' | 'warm' | 'cool' | 'cold';
+
+  return {
+    leadId: lead.id,
+    companyName: lead.companyName,
+    fitScore: Math.min(100, Math.max(0, Math.round(parsed.fitScore))),
+    priority,
+    qualifies: parsed.qualifies,
+    disqualificationReason: parsed.qualifies ? undefined : (parsed.disqualificationReason ?? 'Does not meet ICP criteria'),
+    reasoning: parsed.reasoning,
+    durationMs: Date.now() - startedAt,
   };
 }

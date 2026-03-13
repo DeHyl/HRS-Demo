@@ -187,6 +187,10 @@ export const leads = pgTable("leads", {
   qualifiedAt: timestamp("qualified_at"),
   convertedAt: timestamp("converted_at"),
   lostAt: timestamp("lost_at"),
+  // Scrubbing Agent fields
+  companyDescription: text("company_description"),
+  disqualificationReason: text("disqualification_reason"),
+  researchStatus: text("research_status"),
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true });

@@ -55,6 +55,40 @@ export interface ProspectorRunResult {
   results: ProspectResult[];
 }
 
+// ─── Demo data fallback (used when SERP_API is not configured) ───────────────
+
+const DEMO_COMPANIES: Array<{ companyName: string; website: string; snippet: string; industry: string }> = [
+  { companyName: 'Applied Aerospace Structures', website: 'https://www.aascworld.com', snippet: 'Manufacturer of composite aerospace structures and assemblies. Engineering team of 200+ uses legacy CAD tools.', industry: 'Aerospace & Defense' },
+  { companyName: 'Pacific Defense Solutions', website: 'https://www.pdsdefense.com', snippet: 'Defense contractor specializing in ground vehicle systems. Multiple engineering programs running simultaneously.', industry: 'Aerospace & Defense' },
+  { companyName: 'Ducommun Incorporated', website: 'https://www.ducommun.com', snippet: 'Structural, electronic and electromechanical components for aerospace and defense. Known Creo users.', industry: 'Aerospace & Defense' },
+  { companyName: 'GenMark Diagnostics', website: 'https://www.genmarkdx.com', snippet: 'Medical device company developing automated molecular diagnostic systems. Product development team of 80.', industry: 'Medical Devices' },
+  { companyName: 'Natus Medical', website: 'https://www.natus.com', snippet: 'Neurology and newborn care medical devices. R&D team evaluating PDM solutions for design control compliance.', industry: 'Medical Devices' },
+  { companyName: 'Sparton Medical Systems', website: 'https://www.sparton.com', snippet: 'Contract manufacturer for complex medical devices. FDA-regulated, needs traceability from design to manufacturing.', industry: 'Medical Devices' },
+  { companyName: 'Fluidic Analytics', website: 'https://www.fluidicanalytics.com', snippet: 'Microfluidic bioanalysis instruments. Small engineering team, currently using Inventor. Exploring SolidWorks.', industry: 'Medical Devices' },
+  { companyName: 'Hendrickson International', website: 'https://www.hendrickson-intl.com', snippet: 'Manufacturer of truck suspensions and wheel-end systems. Large engineering org, 500+ engineers globally.', industry: 'Automotive' },
+  { companyName: 'Modine Manufacturing', website: 'https://www.modine.com', snippet: 'Thermal management products for automotive and industrial. CFD simulation needs for heat exchanger design.', industry: 'Industrial Equipment' },
+  { companyName: 'Roper Technologies', website: 'https://www.ropertech.com', snippet: 'Diversified industrial company with engineering-intensive product lines. Multiple ERP integrations needed.', industry: 'Industrial Equipment' },
+  { companyName: 'Haynes International', website: 'https://www.haynesintl.com', snippet: 'High-performance alloys for aerospace and industrial. Materials engineering team of 150+.', industry: 'Aerospace & Defense' },
+  { companyName: 'Teledyne FLIR', website: 'https://www.teledyneflir.com', snippet: 'Infrared cameras and sensing systems. Large CAD environment, evaluating cloud PDM solutions.', industry: 'Aerospace & Defense' },
+  { companyName: 'Proto Labs', website: 'https://www.protolabs.com', snippet: 'Rapid manufacturing services. Additive and CNC — potential 3D printing partnership/integration opportunity.', industry: 'Industrial Equipment' },
+  { companyName: 'Watts Water Technologies', website: 'https://www.wattswater.com', snippet: 'Flow control products for water quality and conservation. CAM programming bottleneck on CNC machining lines.', industry: 'Industrial Equipment' },
+  { companyName: 'Bruker Corporation', website: 'https://www.bruker.com', snippet: 'Scientific instruments and analytical systems. Precision engineering, strong simulation needs.', industry: 'Electronics' },
+];
+
+function getDemoCompanies(criteria: ProspectSearchCriteria): Array<{ companyName: string; website: string | null; snippet: string }> {
+  const industryLower = criteria.industry.toLowerCase();
+  const filtered = DEMO_COMPANIES.filter(c =>
+    c.industry.toLowerCase().includes(industryLower.split(' ')[0]) ||
+    industryLower.includes(c.industry.toLowerCase().split(' ')[0])
+  );
+  const pool = filtered.length >= 3 ? filtered : DEMO_COMPANIES;
+  return pool.slice(0, criteria.maxResults || 15).map(c => ({
+    companyName: c.companyName,
+    website: c.website,
+    snippet: c.snippet,
+  }));
+}
+
 // ─── SerpAPI helpers ─────────────────────────────────────────────────────────
 
 async function googleSearch(query: string, numResults = 10): Promise<Array<{
@@ -240,30 +274,35 @@ export async function runProspector(
 
   console.log(`[Prospector] Starting search: ${criteria.industry}${criteria.location ? ` in ${criteria.location}` : ''}`);
 
-  // Step 1: Discover companies via Google + LinkedIn
-  const [linkedInCompanies, googleCompanies] = await Promise.all([
-    searchLinkedInCompanies(criteria),
-    searchGoogleCompanies(criteria),
-  ]);
-
-  // Merge and dedup by normalized company name
+  // Step 1: Discover companies via Google + LinkedIn (or demo fallback)
   const existingNorm = new Set(existingCompanyNames.map(normalizeCompanyName));
-  const seen = new Set<string>();
-  const candidates: Array<{ companyName: string; website: string | null; snippet: string }> = [];
+  let candidates: Array<{ companyName: string; website: string | null; snippet: string }> = [];
 
-  for (const c of [...linkedInCompanies, ...googleCompanies]) {
-    const norm = normalizeCompanyName(c.companyName);
-    if (!norm || seen.has(norm) || existingNorm.has(norm)) continue;
-    seen.add(norm);
-    candidates.push({
-      companyName: c.companyName,
-      website: 'website' in c ? c.website : null,
-      snippet: c.snippet,
-    });
-    if (candidates.length >= maxResults * 2) break; // gather 2x to account for disqualifications
+  if (!SERP_API_KEY) {
+    console.warn('[Prospector] SERP_API not configured — using demo company dataset');
+    candidates = getDemoCompanies(criteria).filter(
+      c => !existingNorm.has(normalizeCompanyName(c.companyName))
+    );
+  } else {
+    const [linkedInCompanies, googleCompanies] = await Promise.all([
+      searchLinkedInCompanies(criteria),
+      searchGoogleCompanies(criteria),
+    ]);
+    const seen = new Set<string>();
+    for (const c of [...linkedInCompanies, ...googleCompanies]) {
+      const norm = normalizeCompanyName(c.companyName);
+      if (!norm || seen.has(norm) || existingNorm.has(norm)) continue;
+      seen.add(norm);
+      candidates.push({
+        companyName: c.companyName,
+        website: 'website' in c ? c.website : null,
+        snippet: c.snippet,
+      });
+      if (candidates.length >= maxResults * 2) break;
+    }
   }
 
-  console.log(`[Prospector] ${candidates.length} unique candidates found`);
+  console.log(`[Prospector] ${candidates.length} candidates found (SERP_API: ${SERP_API_KEY ? 'live' : 'demo'})`);
 
   // Step 2: Enrich + scrub each candidate (bounded concurrency)
   const limit = pLimit(3);

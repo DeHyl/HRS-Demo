@@ -252,6 +252,30 @@ export default function LeadsPage() {
     },
   });
 
+  const aiHandoffMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await apiRequest("POST", `/api/agents/handoff/${leadId}`, {
+        pushToSalesforce: true,
+        convertToOpportunity: false,
+      });
+      return res.json();
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({
+        title: `AI Handoff complete — ${data.companyName}`,
+        description: [
+          data.productInterests?.length ? `Products: ${data.productInterests.map((p: { productName: string }) => p.productName).join(', ')}` : null,
+          data.budget ? `Budget: ${data.budget}` : null,
+          data.salesforcePushed ? 'Pushed to Salesforce ✓' : null,
+        ].filter(Boolean).join(' · '),
+      });
+    },
+    onError: () => {
+      toast({ title: "AI Handoff failed", description: "Could not complete handoff", variant: "destructive" });
+    },
+  });
+
   const handoffMutation = useMutation({
     mutationFn: async ({ leadId, data }: { leadId: string; data: typeof qualifyData }) => {
       const res = await apiRequest("PATCH", `/api/leads/${leadId}`, {
@@ -574,6 +598,8 @@ export default function LeadsPage() {
               onCall={() => handleCallLead(selectedLead)}
               onHandoff={() => setShowQualifyDialog(true)}
               isHandingOff={handoffMutation.isPending}
+              onAiHandoff={() => aiHandoffMutation.mutate(selectedLead.id)}
+              isAiHandingOff={aiHandoffMutation.isPending}
             />
           ) : (
             <div className="h-full flex items-center justify-center">
@@ -1013,7 +1039,9 @@ function LeadDetailPanel({
   isResearching,
   onCall,
   onHandoff,
-  isHandingOff
+  isHandingOff,
+  onAiHandoff,
+  isAiHandingOff,
 }: {
   lead: LeadWithResearch;
   detail: { lead: Lead; researchPacket: ResearchPacket | null } | undefined;
@@ -1024,6 +1052,8 @@ function LeadDetailPanel({
   onCall: () => void;
   onHandoff: () => void;
   isHandingOff: boolean;
+  onAiHandoff: () => void;
+  isAiHandingOff: boolean;
 }) {
   const packet = detail?.researchPacket;
 
@@ -1119,22 +1149,41 @@ function LeadDetailPanel({
             </Button>
           )}
           <div className="flex-1" />
-          {packet && lead.status !== "qualified" && lead.status !== "handed_off" && (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={onHandoff}
-              disabled={isHandingOff}
-              className="bg-green-600 hover:bg-green-700"
-              data-testid="button-handoff-to-ae"
-            >
-              {isHandingOff ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <ArrowRight className="h-4 w-4 mr-2" />
+          {lead.status !== "qualified" && lead.status !== "handed_off" && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={onAiHandoff}
+                disabled={isAiHandingOff}
+                className="bg-purple-600 hover:bg-purple-700"
+                data-testid="button-ai-handoff"
+              >
+                {isAiHandingOff ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {isAiHandingOff ? "Processing..." : "AI Handoff"}
+              </Button>
+              {packet && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onHandoff}
+                  disabled={isHandingOff}
+                  className="border-green-600 text-green-700 hover:bg-green-50"
+                  data-testid="button-handoff-to-ae"
+                >
+                  {isHandingOff ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                  )}
+                  Manual
+                </Button>
               )}
-              Qualify for AE
-            </Button>
+            </div>
           )}
           {(lead.status === "qualified" || lead.status === "handed_off") && (
             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 gap-1">

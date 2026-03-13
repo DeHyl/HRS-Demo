@@ -20,6 +20,7 @@ import { processLeadResearch } from './leads-routes.js';
 import { notifyResearchComplete } from './dashboardUpdates.js';
 import { scrubLead } from './ai/leadResearch.js';
 import { runProspector, ProspectSearchCriteria } from './ai/prospectorAgent.js';
+import { runHandoffAgent } from './ai/handoffAgent.js';
 import pLimit from 'p-limit';
 
 // Authentication middleware (reuse from routes.ts pattern)
@@ -500,6 +501,53 @@ export function registerAgentRoutes(app: Express) {
       console.error('[Prospector] Error:', error);
       res.status(500).json({
         message: 'Prospector Agent failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
+   * POST /api/agents/handoff/:leadId
+   * Handoff Agent — post-call orchestrator.
+   * Extracts BANT from transcript, scores product interest,
+   * marks lead as "qualified", and pushes to Salesforce.
+   *
+   * Body:
+   *   callSessionId?: string      — call session to extract BANT from
+   *   aeEmail?: string            — AE email to assign in Salesforce
+   *   pushToSalesforce?: boolean  — default true
+   *   convertToOpportunity?: boolean — default false
+   *   manualNotes?: string        — SDR notes
+   */
+  app.post('/api/agents/handoff/:leadId', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { leadId } = req.params;
+      const {
+        callSessionId,
+        aeEmail,
+        pushToSalesforce = true,
+        convertToOpportunity = false,
+        manualNotes,
+      } = req.body;
+
+      const result = await runHandoffAgent({
+        leadId,
+        callSessionId,
+        aeEmail,
+        pushToSalesforce,
+        convertToOpportunity,
+        manualNotes,
+      });
+
+      // Invalidate leads cache via notification
+      const userId = req.session!.userId;
+      if (userId) notifyResearchComplete(leadId, userId);
+
+      res.json(result);
+    } catch (error) {
+      console.error('[HandoffAgent] Error:', error);
+      res.status(500).json({
+        message: 'Handoff Agent failed',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

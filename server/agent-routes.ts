@@ -19,6 +19,7 @@ import { storage } from './storage.js';
 import { processLeadResearch } from './leads-routes.js';
 import { notifyResearchComplete } from './dashboardUpdates.js';
 import { scrubLead } from './ai/leadResearch.js';
+import { runProspector, ProspectSearchCriteria } from './ai/prospectorAgent.js';
 import pLimit from 'p-limit';
 
 // Authentication middleware (reuse from routes.ts pattern)
@@ -426,6 +427,79 @@ export function registerAgentRoutes(app: Express) {
       console.error('[ScrubAgent] Error:', error);
       res.status(500).json({
         message: 'Scrubbing Agent failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
+   * POST /api/agents/prospect
+   * Prospector Agent — discovers NEW leads from Google + LinkedIn + website scraping.
+   * Inserts qualifying leads (fitScore >= minFitScore) directly into the leads DB.
+   *
+   * Body:
+   *   criteria: ProspectSearchCriteria
+   *   assignToSdrId?: string   — SDR to assign new leads to
+   */
+  app.post('/api/agents/prospect', requireAuth, async (req: Request, res: Response) => {
+    const startedAt = Date.now();
+    try {
+      const { criteria, assignToSdrId } = req.body as {
+        criteria: ProspectSearchCriteria;
+        assignToSdrId?: string;
+      };
+
+      if (!criteria?.industry) {
+        return res.status(400).json({ message: 'criteria.industry is required' });
+      }
+
+      // Get existing company names to avoid duplicates
+      const existingLeads = await storage.getAllLeads();
+      const existingNames = existingLeads.map(l => l.companyName);
+
+      const prospectorResult = await runProspector(criteria, existingNames);
+
+      // Insert qualifying leads into DB
+      let inserted = 0;
+      const insertedLeads = [];
+
+      for (const prospect of prospectorResult.results) {
+        if (!prospect.qualifies || prospect.fitScore < (criteria.minFitScore ?? 55)) continue;
+        if (!prospect.contactName || prospect.contactName === 'Unknown') continue;
+
+        try {
+          const newLead = await storage.createLead({
+            companyName: prospect.companyName,
+            companyWebsite: prospect.companyWebsite || undefined,
+            companyIndustry: prospect.companyIndustry,
+            contactName: prospect.contactName,
+            contactTitle: prospect.contactTitle || undefined,
+            contactEmail: prospect.contactEmail || `prospect@${(prospect.companyWebsite || 'unknown.com').replace(/https?:\/\//, '')}`,
+            contactPhone: prospect.contactPhone || undefined,
+            contactLinkedIn: prospect.contactLinkedIn || undefined,
+            source: 'ai-prospector',
+            status: 'new',
+            fitScore: prospect.fitScore,
+            priority: prospect.priority,
+            assignedSdrId: assignToSdrId || undefined,
+          });
+          insertedLeads.push(newLead);
+          inserted++;
+        } catch (err) {
+          console.warn(`[Prospector] Failed to insert ${prospect.companyName}:`, err);
+        }
+      }
+
+      res.json({
+        ...prospectorResult,
+        inserted,
+        durationMs: Date.now() - startedAt,
+        insertedLeads,
+      });
+    } catch (error) {
+      console.error('[Prospector] Error:', error);
+      res.status(500).json({
+        message: 'Prospector Agent failed',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

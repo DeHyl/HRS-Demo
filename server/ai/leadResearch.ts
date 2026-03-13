@@ -57,29 +57,7 @@ export interface DeepResearchData {
   websiteDeep: CompanyWebsiteData | null;
 }
 
-const BSA_SOLUTIONS_CONTEXT = `
-BSA Solutions Inc. is a premium provider of offshore talent outsourcing in the Philippines.
-
-${getProductCatalogPrompt()}
-
-TARGET INDUSTRIES:
-- Technology & Software
-- Finance & Accounting
-- Healthcare
-- E-commerce
-- Professional Services
-- Manufacturing
-- Customer Service
-
-IDEAL FIT SIGNALS:
-- Growing teams needing to scale efficiently
-- Looking for cost-effective labor solutions
-- Need dedicated offshore professionals
-- Seeking administrative and customer support
-- IT and engineering talent requirements
-- Finance and accounting needs
-- Seeking high retention remote workforce
-`;
+const BSA_SOLUTIONS_CONTEXT = getProductCatalogPrompt();
 
 export interface ProductMatch {
   productId: string;
@@ -264,8 +242,7 @@ async function gatherDeepResearchData(
 
   // LinkedIn Company scraping
   if (sources.linkedInCompany !== false) {
-    const companyLinkedIn = lead.companyLinkedIn ||
-      `https://www.linkedin.com/company/${lead.companyName.toLowerCase().replace(/\s+/g, '-')}/`;
+    const companyLinkedIn = `https://www.linkedin.com/company/${lead.companyName.toLowerCase().replace(/\s+/g, '-')}/`;
 
     deepTasks.push(
       scrapeLinkedInCompany(companyLinkedIn)

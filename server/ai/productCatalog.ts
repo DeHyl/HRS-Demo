@@ -1,7 +1,9 @@
-// BSA Solutions Service Catalog
-// Talent outsourcing services from Philippines and Malaysia
+// Hawk Ridge Systems — Product & Service Catalog
+// Source: hawkridgesys.com (scraped March 2026)
+// "Better Engineering Starts Here" — empowering engineers since 1996
+// 23,000+ customers | 22+ offices across US & Canada
 
-export interface BSAService {
+export interface HawkRidgeProduct {
   id: string;
   name: string;
   category: string;
@@ -11,247 +13,315 @@ export interface BSAService {
   industries: string[];
   companySizeMatch: string[];
   keywords: string[];
-  engagementModel: 'shared' | 'dedicated' | 'build-transfer';
-  typicalTeamSize: string;
-  monthlyPriceRange: string;
+  vendor: string;
+  competesAgainst: string[];
 }
 
-export const BSA_SERVICES: BSAService[] = [
+export const HAWK_RIDGE_PRODUCTS: HawkRidgeProduct[] = [
+  // ─── SOLIDWORKS CAD ───────────────────────────────────────────────────────
   {
-    id: "customer-support-team",
-    name: "Customer Support Team",
-    category: "Customer Experience",
-    description: "Dedicated or shared customer service representatives handling phone, email, and chat support with 24/7 coverage options",
-    idealFor: ["E-commerce businesses with high ticket volume", "SaaS companies scaling support", "Service businesses needing 24/7 coverage"],
-    painPointsSolved: ["Long customer response times", "High support costs", "Inability to provide 24/7 coverage", "Scaling support during peak seasons", "Customer satisfaction issues"],
-    industries: ["E-Commerce", "SaaS", "Healthcare", "Financial Services", "Hospitality", "Retail"],
+    id: "solidworks-professional",
+    name: "SOLIDWORKS Professional",
+    category: "CAD Software",
+    vendor: "Dassault Systèmes",
+    description: "3D parametric solid modeling with component library (Toolbox), photo rendering (Visualize Standard), costing application, and eDrawings Pro. Best fit for most design engineers.",
+    idealFor: ["Design engineers doing part & assembly modeling", "Teams moving from 2D CAD (AutoCAD, DraftSight)", "Companies standardizing on a single CAD platform"],
+    painPointsSolved: ["Still using 2D AutoCAD for 3D design", "Multiple disconnected CAD tools", "Slow design iteration cycles", "No integrated component library"],
+    industries: ["Industrial Equipment", "Consumer Products", "Electronics", "Medical Devices", "Automotive"],
+    companySizeMatch: ["5-50", "51-200", "201-500"],
+    keywords: ["solidworks", "CAD", "3D modeling", "parametric", "design", "parts", "assemblies", "drawings"],
+    competesAgainst: ["Autodesk Inventor", "PTC Creo", "Siemens NX", "Fusion 360", "Onshape"],
+  },
+  {
+    id: "solidworks-premium",
+    name: "SOLIDWORKS Premium",
+    category: "CAD Software",
+    vendor: "Dassault Systèmes",
+    description: "All Professional features plus built-in Simulation (static FEA), Motion analysis, Routing (piping/electrical), and TolAnalyst. Ideal for power users who need stress testing without buying separate simulation.",
+    idealFor: ["Mechanical engineers needing built-in FEA", "Teams designing piping or electrical routing", "Power users wanting all-in-one design + analysis"],
+    painPointsSolved: ["Separate CAD and FEA tools that don't integrate", "No way to validate designs before prototyping", "Expensive physical prototypes from design errors"],
+    industries: ["Aerospace & Defense", "Industrial Equipment", "Medical Devices", "Automotive", "Electronics"],
     companySizeMatch: ["10-50", "51-200", "201-500", "500+"],
-    keywords: ["customer service", "support", "help desk", "chat support", "call center", "tickets", "zendesk", "intercom", "freshdesk"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "3-15 agents",
-    monthlyPriceRange: "$1,500-$3,000/agent"
+    keywords: ["solidworks premium", "FEA", "simulation", "stress analysis", "motion", "routing", "piping"],
+    competesAgainst: ["Autodesk Inventor + Nastran", "PTC Creo + Simulate", "Siemens NX CAE"],
   },
   {
-    id: "virtual-assistant-team",
-    name: "Virtual Assistant Team",
-    category: "Administrative Support",
-    description: "Executive and administrative assistants handling scheduling, email management, research, travel coordination, and general admin tasks",
-    idealFor: ["Busy executives needing leverage", "Growing teams without admin support", "Entrepreneurs wearing too many hats"],
-    painPointsSolved: ["Executive time wasted on admin tasks", "No administrative support budget", "Calendar chaos and scheduling conflicts", "Email overload", "Research bottlenecks"],
-    industries: ["All Industries", "Professional Services", "Real Estate", "Consulting", "Technology", "Healthcare"],
-    companySizeMatch: ["1-10", "10-50", "51-200"],
-    keywords: ["virtual assistant", "admin", "executive assistant", "scheduling", "email management", "calendar", "travel", "research"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "1-5 VAs",
-    monthlyPriceRange: "$1,200-$2,500/VA"
-  },
-  {
-    id: "accounting-finance-team",
-    name: "Accounting & Finance Team",
-    category: "Finance Operations",
-    description: "Bookkeepers, accountants, and financial analysts handling AP/AR, reconciliation, financial reporting, and analysis",
-    idealFor: ["Companies outgrowing part-time bookkeepers", "Businesses needing better financial visibility", "CFOs wanting to focus on strategy"],
-    painPointsSolved: ["Backlogged bookkeeping", "Inaccurate financial data", "Slow monthly close process", "Lack of financial insights", "High cost of local accountants"],
-    industries: ["E-Commerce", "Professional Services", "Real Estate", "Manufacturing", "Retail", "SaaS"],
-    companySizeMatch: ["10-50", "51-200", "201-500"],
-    keywords: ["bookkeeping", "accounting", "finance", "AP", "AR", "reconciliation", "quickbooks", "xero", "netsuite", "financial reporting"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "2-8 staff",
-    monthlyPriceRange: "$1,800-$3,500/accountant"
-  },
-  {
-    id: "digital-marketing-team",
-    name: "Digital Marketing Team",
-    category: "Marketing & Growth",
-    description: "Social media managers, content creators, PPC specialists, and SEO experts driving online growth and brand awareness",
-    idealFor: ["Brands building online presence", "Companies scaling paid acquisition", "Businesses needing content at scale"],
-    painPointsSolved: ["Inconsistent social media presence", "High agency fees", "Slow content production", "Poor ad performance", "SEO neglected"],
-    industries: ["E-Commerce", "SaaS", "Consumer Brands", "Real Estate", "Hospitality", "Professional Services"],
-    companySizeMatch: ["10-50", "51-200", "201-500"],
-    keywords: ["social media", "content", "seo", "ppc", "marketing", "ads", "facebook", "instagram", "tiktok", "google ads", "content marketing"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "2-6 specialists",
-    monthlyPriceRange: "$1,500-$3,000/specialist"
-  },
-  {
-    id: "software-development-team",
-    name: "Software Development Team",
-    category: "Technology",
-    description: "Full-stack developers, QA engineers, and DevOps specialists building and maintaining software applications",
-    idealFor: ["Startups extending runway", "Companies with dev hiring challenges", "Businesses needing specific tech skills"],
-    painPointsSolved: ["High developer salaries in US/UK", "Slow hiring for tech roles", "Lack of specific skill sets", "Development backlogs", "QA bottlenecks"],
-    industries: ["Technology", "SaaS", "FinTech", "HealthTech", "E-Commerce"],
+    id: "solidworks-simulation-professional",
+    name: "SOLIDWORKS Simulation Professional",
+    category: "Simulation / FEA",
+    vendor: "Dassault Systèmes",
+    description: "Finite element analysis (FEA) for structural, thermal, frequency, buckling, fatigue, drop-test, and optimization studies directly inside SOLIDWORKS. No data translation required.",
+    idealFor: ["Engineers validating structural integrity", "Teams reducing physical prototype costs", "Companies with regulatory compliance requirements (FDA, AS9100)"],
+    painPointsSolved: ["Physical prototypes failing late in development", "Expensive and slow third-party FEA consultants", "Design changes after tooling already cut", "No data on material stress limits"],
+    industries: ["Aerospace & Defense", "Medical Devices", "Automotive", "Industrial Equipment"],
     companySizeMatch: ["10-50", "51-200", "201-500", "500+"],
-    keywords: ["developer", "software", "engineering", "full-stack", "qa", "testing", "devops", "react", "node", "python", "aws", "mobile"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "3-12 developers",
-    monthlyPriceRange: "$2,500-$5,000/developer"
+    keywords: ["simulation", "FEA", "finite element", "stress analysis", "thermal", "fatigue", "structural", "ANSYS", "analysis"],
+    competesAgainst: ["ANSYS Mechanical", "Abaqus", "Nastran", "PTC Creo Simulate"],
   },
   {
-    id: "data-entry-processing",
-    name: "Data Entry & Processing Team",
-    category: "Back Office Operations",
-    description: "Data entry specialists handling high-volume processing, data cleansing, document management, and digitization",
-    idealFor: ["Companies with data backlogs", "Businesses needing accurate data entry", "Organizations digitizing records"],
-    painPointsSolved: ["Data entry backlogs", "Poor data quality", "Expensive local data entry staff", "Slow document processing", "Inconsistent data formats"],
-    industries: ["Healthcare", "Insurance", "Real Estate", "Legal", "Financial Services", "Logistics"],
-    companySizeMatch: ["51-200", "201-500", "500+"],
-    keywords: ["data entry", "data processing", "document management", "digitization", "data cleansing", "scanning", "indexing"],
-    engagementModel: "shared",
-    typicalTeamSize: "5-20 specialists",
-    monthlyPriceRange: "$1,000-$1,800/specialist"
-  },
-  {
-    id: "ecommerce-operations",
-    name: "E-Commerce Operations Team",
-    category: "E-Commerce",
-    description: "Product listing specialists, inventory managers, and marketplace coordinators for online retail operations",
-    idealFor: ["Amazon/eBay sellers scaling operations", "Shopify store owners", "Multi-channel retailers"],
-    painPointsSolved: ["Product listing backlogs", "Inventory management chaos", "Poor marketplace optimization", "Slow catalog updates", "Order processing delays"],
-    industries: ["E-Commerce", "Retail", "Consumer Products", "Wholesale", "Dropshipping"],
+    id: "solidworks-flow-simulation",
+    name: "SOLIDWORKS Flow Simulation",
+    category: "Simulation / CFD",
+    vendor: "Dassault Systèmes",
+    description: "Computational fluid dynamics (CFD) for internal/external flow, heat transfer, and pressure drop analysis — air, liquids, and gases — built directly into SOLIDWORKS.",
+    idealFor: ["Engineers designing HVAC, pumps, or valves", "Electronics cooling analysis", "Thermal management in enclosures"],
+    painPointsSolved: ["Unknown flow behavior without physical testing", "Electronics overheating issues found late", "Manual thermal calculations that miss key effects"],
+    industries: ["Electronics", "Industrial Equipment", "Aerospace & Defense", "Medical Devices"],
     companySizeMatch: ["10-50", "51-200", "201-500"],
-    keywords: ["amazon", "ebay", "shopify", "product listing", "inventory", "ecommerce", "marketplace", "catalog", "order management"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "2-10 specialists",
-    monthlyPriceRange: "$1,300-$2,500/specialist"
+    keywords: ["CFD", "fluid dynamics", "flow simulation", "thermal", "heat transfer", "HVAC", "cooling", "pressure drop"],
+    competesAgainst: ["ANSYS Fluent", "Autodesk CFD", "Star-CCM+"],
   },
   {
-    id: "graphic-design-team",
-    name: "Graphic Design & Creative Team",
-    category: "Creative Services",
-    description: "Graphic designers, video editors, and creative specialists producing visual content for marketing and branding",
-    idealFor: ["Brands needing consistent visuals", "Marketing teams with design bottlenecks", "Agencies needing overflow capacity"],
-    painPointsSolved: ["Design bottlenecks slowing campaigns", "Inconsistent brand visuals", "High freelancer costs", "Slow creative turnaround", "Video content gaps"],
-    industries: ["Marketing Agencies", "E-Commerce", "Consumer Brands", "Media", "Real Estate", "SaaS"],
+    id: "solidworks-pdm-professional",
+    name: "SOLIDWORKS PDM Professional",
+    category: "PDM / Data Management",
+    vendor: "Dassault Systèmes",
+    description: "Enterprise product data management — version control, check-in/check-out, workflow automation, role-based permissions, BOM management, and audit trails. Supports SOLIDWORKS, AutoCAD, Inventor, and Office files.",
+    idealFor: ["Teams losing files or working on wrong versions", "Companies with engineering change order chaos", "Organizations needing traceability for ISO/AS9100 audits"],
+    painPointsSolved: ["Files saved on shared drives with no version control", "Engineers overwriting each other's work", "No audit trail for engineering changes", "BOM management done in spreadsheets", "Failed ISO/AS9100 audits due to document control"],
+    industries: ["Aerospace & Defense", "Medical Devices", "Automotive", "Industrial Equipment", "Electronics"],
+    companySizeMatch: ["10-50", "51-200", "201-500", "500+"],
+    keywords: ["PDM", "PLM", "version control", "data management", "vault", "revision control", "BOM", "engineering change", "ECO", "workflow"],
+    competesAgainst: ["PTC Windchill", "Siemens Teamcenter", "Autodesk Vault", "Arena PLM", "Agile PLM"],
+  },
+  {
+    id: "solidworks-manage",
+    name: "SOLIDWORKS Manage",
+    category: "PLM",
+    vendor: "Dassault Systèmes",
+    description: "Full PLM layer on top of PDM Professional — project management, advanced BOM, engineering change management, process automation, and business analytics for complete product lifecycle governance.",
+    idealFor: ["Companies needing full PLM without SAP/Oracle complexity", "Engineering orgs managing multiple concurrent product programs", "Companies with complex multi-level BOM management needs"],
+    painPointsSolved: ["PDM exists but project management is in spreadsheets", "No visibility across multiple concurrent programs", "Engineering and manufacturing BOMs out of sync"],
+    industries: ["Aerospace & Defense", "Automotive", "Medical Devices", "Industrial Equipment"],
+    companySizeMatch: ["51-200", "201-500", "500+"],
+    keywords: ["PLM", "product lifecycle", "project management", "change management", "BOM management", "program management"],
+    competesAgainst: ["PTC Windchill", "Siemens Teamcenter", "Dassault ENOVIA", "Arena PLM"],
+  },
+  {
+    id: "3dexperience-cloud",
+    name: "3DEXPERIENCE Cloud Platform",
+    category: "Cloud CAD / PLM",
+    vendor: "Dassault Systèmes",
+    description: "Browser-based CAD (xDesign), cloud PDM, advanced simulation (SIMULIA), and PLM — same Dassault Systèmes technology stack as desktop SOLIDWORKS, accessible from any device without installation.",
+    idealFor: ["Distributed or remote engineering teams", "Companies wanting zero-IT-infrastructure overhead", "Organizations evaluating SaaS alternatives to desktop CAD"],
+    painPointsSolved: ["Remote teams can't collaborate on CAD files", "IT overhead of managing CAD workstations and licenses", "No real-time multi-user CAD collaboration"],
+    industries: ["All Manufacturing Industries"],
+    companySizeMatch: ["5-50", "51-200", "201-500", "500+"],
+    keywords: ["cloud CAD", "xDesign", "3DEXPERIENCE", "SaaS CAD", "cloud PLM", "browser CAD", "remote collaboration"],
+    competesAgainst: ["Autodesk Fusion 360", "Onshape", "PTC Creo+", "Siemens NX Cloud"],
+  },
+  // ─── CAM & MANUFACTURING ────────────────────────────────────────────────────
+  {
+    id: "camworks",
+    name: "CAMWorks",
+    category: "CAM / CNC Programming",
+    vendor: "HCL Technologies",
+    description: "Full-featured CAM and CNC programming fully integrated inside SOLIDWORKS. Feature Recognition (AFR) and Knowledge-Based Machining (KBM) automate toolpath generation. Supports 2.5-axis through full 5-axis milling, mill-turn, and sub-spindle turning.",
+    idealFor: ["Shops using SOLIDWORKS for design and CNC for manufacturing", "Companies reducing manual programming time", "Machine shops with complex 5-axis or multi-spindle work"],
+    painPointsSolved: ["Manual CNC programming taking hours per part", "Re-programming needed every time design changes", "Disconnected CAD and CAM tools requiring data translation", "Programming errors causing scrap and rework"],
+    industries: ["Aerospace & Defense", "Medical Devices", "Automotive", "Industrial Equipment", "Contract Manufacturing"],
+    companySizeMatch: ["5-50", "51-200", "201-500"],
+    keywords: ["CAM", "CNC", "machining", "toolpath", "G-code", "milling", "turning", "5-axis", "manufacturing", "Mastercam", "Fusion CAM"],
+    competesAgainst: ["Mastercam", "Autodesk Fusion 360 CAM", "Siemens NX CAM", "GibbsCAM", "hyperMILL"],
+  },
+  {
+    id: "driveworks-pro",
+    name: "DriveWorks Pro",
+    category: "Design Automation / CPQ",
+    vendor: "DriveWorks Ltd",
+    description: "Enterprise SOLIDWORKS design automation and online 3D CPQ (Configure-Price-Quote) platform. Automatically generates custom quotes, sales drawings, and production-ready SOLIDWORKS models from customer inputs — no manual engineering per order.",
+    idealFor: ["Manufacturers with configurable or custom products", "Engineers spending 80% of time on repetitive order-driven designs", "Sales teams quoting custom products without engineering involvement"],
+    painPointsSolved: ["Every customer order requires custom engineering time", "Quotes take days because engineering must redraw each variant", "Sales can't quote custom products without engineering help", "Order errors from manual CAD reconfiguration"],
+    industries: ["Industrial Equipment", "Consumer Products", "Architectural Products", "Furniture", "Automation"],
+    companySizeMatch: ["10-50", "51-200", "201-500", "500+"],
+    keywords: ["design automation", "CPQ", "configure price quote", "configurator", "rules-based design", "DriveWorks", "product configurator", "variant design"],
+    competesAgainst: ["Salesforce CPQ", "Tacton", "KBMax (Epicor CPQ)", "Tacton CPQ"],
+  },
+  // ─── 3D PRINTING ────────────────────────────────────────────────────────────
+  {
+    id: "markforged-composite",
+    name: "Markforged Composite Printers (Onyx / Mark Two / X-Series)",
+    category: "3D Printing — Composite FFF",
+    vendor: "Markforged",
+    description: "Continuous carbon fiber, fiberglass, and Kevlar reinforced FFF printing. Produces parts with metal-like strength from a desktop or industrial printer. Desktop (Onyx, Mark Two) through industrial (X3, X7, FX10, FX20) systems.",
+    idealFor: ["Engineers replacing aluminum fixtures and tooling with printed parts", "Aerospace and defense teams needing lightweight high-strength parts", "Medical device companies needing biocompatible or sterilizable parts"],
+    painPointsSolved: ["Outsourcing jigs and fixtures takes weeks and is expensive", "Metal machined tooling too heavy for ergonomic use", "Prototype lead times bottlenecking product development"],
+    industries: ["Aerospace & Defense", "Automotive", "Medical Devices", "Industrial Equipment"],
+    companySizeMatch: ["5-50", "51-200", "201-500", "500+"],
+    keywords: ["3D printing", "carbon fiber", "composite", "additive manufacturing", "fixtures", "jigs", "tooling", "Markforged", "continuous fiber", "FFF"],
+    competesAgainst: ["Stratasys FDM", "Ultimaker", "Formlabs FDM", "Desktop Metal"],
+  },
+  {
+    id: "markforged-metal-x",
+    name: "Markforged Metal X",
+    category: "3D Printing — Metal",
+    vendor: "Markforged",
+    description: "Metal FFF (ADAM process) — bound metal filament in 17-4 PH stainless steel, H13, A2/D2 tool steels, Inconel, and copper. Safer than powder-bed metal (no loose powder). Sinter in Metal X wash and sinter station.",
+    idealFor: ["Machine shops printing metal prototypes and end-use parts in-house", "Engineers replacing machined metal components with printed alternatives", "Teams needing small batch metal parts without EDM or machining lead time"],
+    painPointsSolved: ["Metal prototype lead times of 4–8 weeks from outside vendors", "CNC machining capacity constraints", "High cost per metal part for low-volume production runs"],
+    industries: ["Aerospace & Defense", "Medical Devices", "Automotive", "Industrial Equipment", "Tooling"],
     companySizeMatch: ["10-50", "51-200", "201-500"],
-    keywords: ["graphic design", "video editing", "creative", "photoshop", "illustrator", "canva", "video", "branding", "social media graphics"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "2-8 designers",
-    monthlyPriceRange: "$1,400-$2,800/designer"
+    keywords: ["metal 3D printing", "metal additive", "stainless steel", "tool steel", "Inconel", "metal parts", "ADAM", "bound metal"],
+    competesAgainst: ["EOS", "Desktop Metal Studio", "Trumpf TruPrint", "GE Additive"],
   },
   {
-    id: "recruitment-hr-team",
-    name: "Recruitment & HR Support Team",
-    category: "Human Resources",
-    description: "Recruiters, sourcers, and HR coordinators supporting talent acquisition and HR operations",
-    idealFor: ["Fast-growing companies with hiring needs", "Staffing agencies", "Companies with high-volume hiring"],
-    painPointsSolved: ["Slow time-to-hire", "High recruitment agency fees", "Limited sourcing capacity", "HR admin overload", "Candidate screening bottlenecks"],
-    industries: ["Technology", "Staffing", "Healthcare", "Professional Services", "Retail", "Hospitality"],
+    id: "hp-jet-fusion",
+    name: "HP Jet Fusion 5000/5200/5600 Series",
+    category: "3D Printing — MJF Polymer",
+    vendor: "HP",
+    description: "Multi Jet Fusion (MJF) industrial polymer printing in PA 12 and PA 11 nylon. Production-grade throughput — 200+ parts per build cycle. Isotropic mechanical properties, no support structures needed.",
+    idealFor: ["Companies producing end-use nylon parts at volume", "Manufacturers replacing injection molding for short runs", "Teams printing functional assemblies in a single build"],
+    painPointsSolved: ["Injection molding tooling cost prohibitive for low-volume parts", "Support structure removal adding post-processing time", "Anisotropic SLS parts failing in certain load directions"],
+    industries: ["Automotive", "Consumer Products", "Medical Devices", "Industrial Equipment", "Aerospace & Defense"],
     companySizeMatch: ["51-200", "201-500", "500+"],
-    keywords: ["recruiting", "sourcing", "hr", "talent acquisition", "hiring", "linkedin recruiter", "ats", "onboarding", "screening"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "2-6 recruiters",
-    monthlyPriceRange: "$1,600-$3,000/recruiter"
+    keywords: ["MJF", "HP Jet Fusion", "nylon", "PA12", "production 3D printing", "powder bed", "additive manufacturing", "SLS alternative"],
+    competesAgainst: ["EOS SLS", "3D Systems SLS", "Stratasys H350"],
   },
   {
-    id: "technical-support-team",
-    name: "Technical Support Team",
-    category: "IT & Technical Support",
-    description: "Tier 1-2 technical support specialists handling software troubleshooting, IT help desk, and product support",
-    idealFor: ["SaaS companies with technical products", "IT service providers", "Tech companies with product support needs"],
-    painPointsSolved: ["Long ticket resolution times", "High technical support costs", "Lack of technical expertise", "24/7 coverage gaps", "Escalation bottlenecks"],
-    industries: ["SaaS", "Technology", "IT Services", "Telecommunications", "Software"],
-    companySizeMatch: ["51-200", "201-500", "500+"],
-    keywords: ["tech support", "it support", "help desk", "troubleshooting", "tier 1", "tier 2", "technical", "software support", "IT helpdesk"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "3-10 specialists",
-    monthlyPriceRange: "$1,800-$3,200/specialist"
+    id: "formlabs-form4",
+    name: "Formlabs Form 4 / Form 4L (SLA)",
+    category: "3D Printing — Resin SLA",
+    vendor: "Formlabs",
+    description: "Low Force Stereolithography (LFS) — fast, reliable, high-accuracy resin printing. Extensive engineering materials library: standard, tough, rigid, flexible, high-temp, dental, castable. Form 4L provides large-format capability.",
+    idealFor: ["Design engineers needing high-detail prototypes fast", "Medical and dental teams printing patient-specific devices", "Teams testing form, fit, and function before tooling"],
+    painPointsSolved: ["FDM layer lines and poor surface finish failing aesthetic reviews", "Long prototype lead times from outside service bureaus", "Limited material options on FDM printers for functional testing"],
+    industries: ["Medical Devices", "Consumer Products", "Aerospace & Defense", "Electronics", "Dental"],
+    companySizeMatch: ["5-50", "51-200", "201-500"],
+    keywords: ["SLA", "resin printing", "stereolithography", "Formlabs", "Form 4", "high detail", "smooth surface", "dental", "castable"],
+    competesAgainst: ["3D Systems SLA", "Carbon DLS", "EnvisionTEC", "Stratasys PolyJet"],
+  },
+  // ─── 3D SCANNING ────────────────────────────────────────────────────────────
+  {
+    id: "artec-handheld-scanners",
+    name: "Artec 3D Scanners (Leo / EVA / Spider II)",
+    category: "3D Scanning",
+    vendor: "Artec 3D",
+    description: "Professional handheld structured-light 3D scanners for reverse engineering, inspection, and digital archiving. Leo is wireless with onboard display; EVA for large objects; Spider II for high-accuracy small/complex parts.",
+    idealFor: ["Engineers capturing as-built geometry for reverse engineering", "Quality teams verifying parts against CAD nominal", "Companies digitizing legacy parts with no existing CAD"],
+    painPointsSolved: ["Legacy parts with no CAD data can't be redesigned or replaced", "Manual measurement of complex freeform surfaces is inaccurate", "Expensive and slow CMM programming for first article inspection"],
+    industries: ["Aerospace & Defense", "Automotive", "Medical Devices", "Industrial Equipment", "Cultural Heritage"],
+    companySizeMatch: ["5-50", "51-200", "201-500", "500+"],
+    keywords: ["3D scanning", "reverse engineering", "handheld scanner", "structured light", "Artec", "scan-to-CAD", "inspection", "metrology"],
+    competesAgainst: ["Creaform", "FARO", "Hexagon handheld", "Zeiss T-SCAN"],
   },
   {
-    id: "sales-development-team",
-    name: "Sales Development Team",
-    category: "Sales & Revenue",
-    description: "SDRs, lead researchers, and appointment setters supporting sales pipeline generation and qualification",
-    idealFor: ["B2B companies scaling outbound", "Sales teams with lead gen bottlenecks", "Companies entering new markets"],
-    painPointsSolved: ["Empty sales pipeline", "AEs doing prospecting instead of closing", "High cost per meeting", "Inconsistent outreach", "Lead research taking too long"],
-    industries: ["SaaS", "Technology", "Professional Services", "Financial Services", "Manufacturing", "B2B Services"],
-    companySizeMatch: ["51-200", "201-500", "500+"],
-    keywords: ["sdr", "sales development", "lead generation", "prospecting", "appointment setting", "cold calling", "outbound", "sales", "pipeline"],
-    engagementModel: "dedicated",
-    typicalTeamSize: "3-8 SDRs",
-    monthlyPriceRange: "$1,800-$3,200/SDR"
+    id: "geomagic-design-x",
+    name: "Geomagic Design X (Scan-to-CAD)",
+    category: "3D Scanning Software",
+    vendor: "Hexagon / 3D Systems",
+    description: "Complete scan-to-CAD reverse engineering software — mesh editing, automated feature extraction, parametric solid modeling, and direct SOLIDWORKS integration. Creates fully-featured CAD models from scan data.",
+    idealFor: ["Engineers reverse engineering legacy parts or competitor products", "Teams creating CAD from physical objects with no drawings", "Companies digitizing tooling masters, molds, or patterns"],
+    painPointsSolved: ["Scan data is a mesh — can't be edited or used in SOLIDWORKS directly", "Manual recreation of parts from physical measurements is slow and inaccurate", "Molds and tooling worn but no CAD exists to regrind or repair"],
+    industries: ["Aerospace & Defense", "Automotive", "Industrial Equipment", "Medical Devices"],
+    companySizeMatch: ["5-50", "51-200", "201-500"],
+    keywords: ["Geomagic", "Design X", "scan to CAD", "reverse engineering", "mesh to solid", "point cloud", "NURBS", "parametric"],
+    competesAgainst: ["Siemens NX Reverse Engineering", "Autodesk ReCap", "PolyWorks Modeler"],
   },
   {
-    id: "build-transfer-program",
-    name: "Build & Transfer Program",
-    category: "Strategic Outsourcing",
-    description: "Full offshore team establishment with eventual ownership transfer - BSA builds and operates your team until you're ready to take over",
-    idealFor: ["Companies wanting their own offshore presence", "Businesses planning long-term expansion", "Organizations wanting full control eventually"],
-    painPointsSolved: ["Want offshore but need guidance to start", "Don't know how to set up foreign entity", "Need experienced management during ramp", "Want eventual full ownership and control"],
-    industries: ["All Industries"],
-    companySizeMatch: ["201-500", "500+"],
-    keywords: ["build transfer", "captive center", "offshore operations", "gbs", "shared services", "subsidiary", "expansion"],
-    engagementModel: "build-transfer",
-    typicalTeamSize: "15-100+ staff",
-    monthlyPriceRange: "Custom pricing"
-  }
+    id: "geomagic-control-x",
+    name: "Geomagic Control X (Dimensional Inspection)",
+    category: "Metrology / Inspection Software",
+    vendor: "Hexagon / 3D Systems",
+    description: "Dimensional inspection software — compare 3D scan data to CAD nominal, full GD&T analysis, color deviation maps, first article inspection (FAI) reports, and automated reporting for AS9100 / ISO 9001 compliance.",
+    idealFor: ["Quality engineers doing first article inspection (FAI)", "Teams with AS9100 or ISO 9001 compliance requirements", "Manufacturers catching tooling drift and out-of-tolerance parts"],
+    painPointsSolved: ["First article inspection taking days with CMM programming", "Out-of-tolerance parts discovered after full production run", "Manual inspection missing complex freeform surface deviations"],
+    industries: ["Aerospace & Defense", "Automotive", "Medical Devices", "Industrial Equipment"],
+    companySizeMatch: ["10-50", "51-200", "201-500", "500+"],
+    keywords: ["inspection", "metrology", "GD&T", "FAI", "first article", "Control X", "dimensional inspection", "color map", "deviation analysis", "CMM"],
+    competesAgainst: ["PolyWorks Inspector", "Zeiss Calypso", "Hexagon PC-DMIS", "Verisurf"],
+  },
+  // ─── TRAINING & SERVICES ─────────────────────────────────────────────────────
+  {
+    id: "solidworks-training",
+    name: "SOLIDWORKS Training & Certification",
+    category: "Training",
+    vendor: "Hawk Ridge Systems",
+    description: "Instructor-led SOLIDWORKS training at 22+ North American centers, live virtual, or self-paced (SolidProfessor). Courses from Essentials through Advanced Surfacing, Simulation, Weldments, Sheet Metal, PDM, Electrical, and MBD. CSWA/CSWP/CSWE certification testing center.",
+    idealFor: ["New SOLIDWORKS users coming from AutoCAD or other CAD", "Engineers wanting to pass CSWA/CSWP certification", "Teams standardizing workflows and best practices"],
+    painPointsSolved: ["Low SOLIDWORKS adoption after license purchase", "Reps using <20% of software capabilities", "Failed certification exams", "Tribal knowledge instead of documented standard practices"],
+    industries: ["All Manufacturing Industries"],
+    companySizeMatch: ["1-10", "10-50", "51-200", "201-500", "500+"],
+    keywords: ["training", "SOLIDWORKS training", "CSWA", "CSWP", "CSWE", "certification", "SolidProfessor", "instructor-led", "online training"],
+    competesAgainst: ["Dassault Systèmes direct training", "SolidProfessor standalone", "LinkedIn Learning", "Udemy"],
+  },
+  {
+    id: "implementation-services",
+    name: "Implementation & Engineering Services",
+    category: "Professional Services",
+    vendor: "Hawk Ridge Systems",
+    description: "Full deployment and configuration for SOLIDWORKS, PDM/PLM, CAMWorks, DriveWorks — scoping, installation, data migration, and onboarding. Plus contracted design & engineering: CAD, FEA/CFD/EM simulation, reverse engineering, DFAM, PCB design, and 3D scanning services.",
+    idealFor: ["Companies buying software and needing expert deployment", "Teams with engineering projects beyond internal capacity", "Organizations needing outsourced simulation or scanning work"],
+    painPointsSolved: ["Software bought but never fully deployed or adopted", "Internal team lacks bandwidth for a simulation project", "One-time scanning or reverse engineering need without scanner investment"],
+    industries: ["All Manufacturing Industries"],
+    companySizeMatch: ["5-50", "51-200", "201-500", "500+"],
+    keywords: ["implementation", "consulting", "professional services", "engineering services", "deployment", "migration", "scanning services", "simulation services"],
+    competesAgainst: ["Other SolidWorks VARs", "Accenture/Deloitte PLM practices", "Independent CAD consultants"],
+  },
 ];
 
-export function matchServicesToLead(
+// ─── Product Matching ────────────────────────────────────────────────────────
+
+export function matchProductsToLead(
   industry: string | null,
   companySize: string | null,
   painPoints: string[],
-  operationalNeeds: string[]
-): Array<{ service: BSAService; score: number; rationale: string }> {
-  const matches: Array<{ service: BSAService; score: number; rationale: string }> = [];
+  techStack: string[]
+): Array<{ product: HawkRidgeProduct; score: number; rationale: string }> {
+  const matches: Array<{ product: HawkRidgeProduct; score: number; rationale: string }> = [];
 
-  for (const service of BSA_SERVICES) {
+  for (const product of HAWK_RIDGE_PRODUCTS) {
     let score = 0;
     const reasons: string[] = [];
 
     // Industry alignment (25 points)
-    if (industry && service.industries.some(i =>
+    if (industry && product.industries.some(i =>
       i.toLowerCase().includes(industry.toLowerCase()) ||
       industry.toLowerCase().includes(i.toLowerCase()) ||
-      i === "All Industries"
+      i === "All Manufacturing Industries"
     )) {
       score += 25;
       reasons.push(`Industry match: ${industry}`);
     }
 
     // Company size fit (20 points)
-    if (companySize && service.companySizeMatch.some(size => {
-      if (size === "500+") return parseInt(companySize) >= 500;
-      const [min, max] = size.split("-").map(Number);
-      const sizeNum = parseInt(companySize);
-      return sizeNum >= min && sizeNum <= max;
-    })) {
-      score += 20;
-      reasons.push(`Company size fit`);
+    if (companySize) {
+      const sizeNum = parseInt(companySize.replace(/[^0-9]/g, ''));
+      if (!isNaN(sizeNum) && product.companySizeMatch.some(range => {
+        if (range === "500+") return sizeNum >= 500;
+        const [min, max] = range.split("-").map(Number);
+        return sizeNum >= min && sizeNum <= max;
+      })) {
+        score += 20;
+        reasons.push(`Company size fit`);
+      }
     }
 
     // Pain point matching (35 points max)
-    const matchedPainPoints = painPoints.filter(pain =>
-      service.painPointsSolved.some(solved =>
-        pain.toLowerCase().includes(solved.toLowerCase()) ||
-        solved.toLowerCase().includes(pain.toLowerCase())
-      ) ||
-      service.keywords.some(keyword =>
-        pain.toLowerCase().includes(keyword)
-      )
+    const painText = [...painPoints, ...techStack].join(" ").toLowerCase();
+    const matchedPains = product.painPointsSolved.filter(p =>
+      painText.includes(p.toLowerCase().split(" ").slice(0, 3).join(" "))
     );
-    if (matchedPainPoints.length > 0) {
-      score += Math.min(matchedPainPoints.length * 15, 35);
-      reasons.push(`Addresses: ${matchedPainPoints.slice(0, 2).join(", ")}`);
+    const matchedKeywords = product.keywords.filter(k => painText.includes(k.toLowerCase()));
+
+    if (matchedPains.length > 0 || matchedKeywords.length > 0) {
+      score += Math.min((matchedPains.length * 12) + (matchedKeywords.length * 5), 35);
+      if (matchedPains.length > 0) reasons.push(`Addresses: ${matchedPains.slice(0, 2).join("; ")}`);
     }
 
-    // Operational needs alignment (20 points)
-    const operationalMatches = operationalNeeds.filter(need =>
-      service.keywords.some(keyword =>
-        need.toLowerCase().includes(keyword) ||
-        keyword.includes(need.toLowerCase())
-      )
+    // Competitor displacement signal (20 points)
+    const competitorHit = product.competesAgainst.find(c =>
+      painText.includes(c.toLowerCase().split(" ")[0])
     );
-    if (operationalMatches.length > 0) {
+    if (competitorHit) {
       score += 20;
-      reasons.push(`Operational fit: ${operationalMatches.slice(0, 2).join(", ")}`);
+      reasons.push(`Displacement opportunity vs. ${competitorHit}`);
     }
 
-    if (score >= 30) {
+    if (score >= 25) {
       matches.push({
-        service,
+        product,
         score: Math.min(score, 100),
-        rationale: reasons.join(". ")
+        rationale: reasons.join(". "),
       });
     }
   }
@@ -259,51 +329,58 @@ export function matchServicesToLead(
   return matches.sort((a, b) => b.score - a.score).slice(0, 5);
 }
 
-export function getServiceCatalogPrompt(): string {
-  return `BSA SOLUTIONS SERVICE CATALOG:
+// ─── Prompt for AI Agents ────────────────────────────────────────────────────
 
-BSA Solutions is a talent outsourcing company providing skilled professionals from the Philippines and Malaysia. We offer three engagement models:
-- Shared Agents: Cost-effective, 24/7 coverage with agents handling multiple clients
-- Dedicated Agents: Exclusive team members working full-time for one client
-- Build & Transfer: Establish your own offshore operation with eventual ownership transfer
+export function getProductCatalogPrompt(): string {
+  return `HAWK RIDGE SYSTEMS — PRODUCT CATALOG (North America's #1 SOLIDWORKS Reseller)
 
-${BSA_SERVICES.map(s => `
-**${s.name}** (${s.category})
-- ${s.description}
-- Engagement Model: ${s.engagementModel}
-- Typical Team Size: ${s.typicalTeamSize}
-- Investment: ${s.monthlyPriceRange}
-- Ideal for: ${s.idealFor.join(", ")}
-- Pain points solved: ${s.painPointsSolved.join(", ")}
-- Best industries: ${s.industries.join(", ")}
+"Better Engineering Starts Here" — 23,000+ customers, 22+ offices, US & Canada.
+Core vendor partners: Dassault Systèmes, HCL CAMWorks, Markforged, HP, Formlabs, Stratasys, Artec 3D, SCANTECH, Hexagon/Geomagic, DriveWorks.
+
+TARGET INDUSTRIES: Aerospace & Defense, Medical Devices, Automotive, Industrial Equipment, Electronics, Consumer Products
+
+IDEAL CUSTOMER PROFILE:
+- Engineering teams of 5–500 using or evaluating CAD/CAM/Simulation/PDM tools
+- Companies on legacy CAD (AutoCAD 2D, Inventor, Pro/E, NX, Creo) ready to standardize
+- Manufacturers with PDM/PLM pain (files on shared drives, version chaos, no audit trail)
+- Companies investing in 3D printing or scanning capabilities
+- Teams failing design reviews due to no virtual validation (FEA/CFD)
+
+KEY DISQUALIFIERS: Pure software companies, retail, restaurants, real estate, services firms without physical product development.
+
+PRODUCT LINES:
+
+${HAWK_RIDGE_PRODUCTS.map(p => `
+**${p.name}** [${p.category} | ${p.vendor}]
+- ${p.description}
+- Ideal for: ${p.idealFor.slice(0, 2).join("; ")}
+- Solves: ${p.painPointsSolved.slice(0, 3).join("; ")}
+- Competes vs: ${p.competesAgainst.slice(0, 3).join(", ")}
 `).join("\n")}
 
-When matching services to prospects, consider:
-1. Industry alignment (25 points)
-2. Company size fit (20 points)
-3. Pain points addressed (35 points)
-4. Operational needs alignment (20 points)
+COMPETITIVE POSITIONING:
+- vs. Autodesk (Inventor/Fusion/Vault): SOLIDWORKS has deeper manufacturing ecosystem, better CAM integration via CAMWorks, superior PDM for discrete manufacturing
+- vs. PTC Creo/Windchill: SOLIDWORKS is faster to learn, lower TCO, better mid-market fit; Creo wins only at very large aerospace orgs
+- vs. Siemens NX/Teamcenter: NX is complex/expensive enterprise-only; SOLIDWORKS accessible to 5-person shops through 500-person divisions
+- vs. Onshape: SOLIDWORKS has far broader simulation, CAM, and PDM ecosystem; Onshape wins only on pure cloud/remote argument
+- vs. In-house 3D printing alternatives: HRS provides machine + software + training + service + materials as a complete solution, not just hardware
 
-Key differentiators to emphasize:
-- 60-70% cost savings vs. US/UK talent
-- Great Place to Work certified (talent quality)
-- Flexible engagement models (start small, scale up)
-- Philippines: 95% English proficiency, cultural alignment with West
-- Build & Transfer for companies wanting eventual ownership
+HRS VALUE PROPOSITION:
+1. Single vendor for entire design-to-manufacturing stack (CAD → Simulation → PDM → CAM → 3D Printing → Scanning)
+2. Largest North American SOLIDWORKS reseller — 25+ years, local offices everywhere
+3. Certified experts for every product line — not just software sales
+4. Ongoing support, training, and professional services after the sale
 `;
 }
 
-// Backward compatibility aliases
-export type HawkRidgeProduct = BSAService;
-export const HAWK_RIDGE_PRODUCTS = BSA_SERVICES;
-export const matchProductsToLead = (
+// ─── Backward compatibility ──────────────────────────────────────────────────
+// matchServicesToLead alias used by older references
+export const matchServicesToLead = (
   industry: string | null,
   companySize: string | null,
   painPoints: string[],
   techStack: string[]
-) => {
-  const results = matchServicesToLead(industry, companySize, painPoints, techStack);
-  // Map 'service' to 'product' for backward compatibility
-  return results.map(r => ({ product: r.service, score: r.score, rationale: r.rationale }));
-};
-export const getProductCatalogPrompt = getServiceCatalogPrompt;
+) => matchProductsToLead(industry, companySize, painPoints, techStack)
+  .map(r => ({ service: r.product, score: r.score, rationale: r.rationale }));
+
+export const getServiceCatalogPrompt = getProductCatalogPrompt;

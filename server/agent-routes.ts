@@ -74,17 +74,17 @@ export function registerAgentRoutes(app: Express) {
 
       // Get user context
       const userId = req.session!.userId;
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId!);
 
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
       }
 
       const userContext = {
-        userId,
+        userId: parseInt(userId as string) || 0,
         userRole: user.role as 'admin' | 'manager' | 'sdr' | 'account_executive' | 'account_specialist',
-        sdrId: user.sdrId || undefined,
-        managerId: user.managerId || undefined
+        sdrId: user.sdrId ? parseInt(user.sdrId as unknown as string) : undefined,
+        managerId: user.managerId ? parseInt(user.managerId as unknown as string) : undefined,
       };
 
       // Determine which agent to use
@@ -144,7 +144,7 @@ export function registerAgentRoutes(app: Express) {
       }
 
       const userId = req.session!.userId;
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId!);
 
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -155,10 +155,10 @@ export function registerAgentRoutes(app: Express) {
         agentType: 'director',
         conversationHistory,
         userContext: {
-          userId,
+          userId: parseInt(userId as string) || 0,
           userRole: user.role as 'admin' | 'manager' | 'sdr' | 'account_executive' | 'account_specialist',
-          sdrId: user.sdrId || undefined,
-          managerId: user.managerId || undefined
+          sdrId: user.sdrId ? parseInt(user.sdrId as unknown as string) : undefined,
+          managerId: user.managerId ? parseInt(user.managerId as unknown as string) : undefined,
         },
         includeUserData: true
       };
@@ -193,7 +193,7 @@ export function registerAgentRoutes(app: Express) {
       }
 
       const userId = req.session!.userId;
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId!);
 
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -204,10 +204,10 @@ export function registerAgentRoutes(app: Express) {
         agentType,
         conversationHistory,
         userContext: {
-          userId,
+          userId: parseInt(userId as string) || 0,
           userRole: user.role as 'admin' | 'manager' | 'sdr' | 'account_executive' | 'account_specialist',
-          sdrId: user.sdrId || undefined,
-          managerId: user.managerId || undefined
+          sdrId: user.sdrId ? parseInt(user.sdrId as unknown as string) : undefined,
+          managerId: user.managerId ? parseInt(user.managerId as unknown as string) : undefined,
         },
         includeUserData
       };

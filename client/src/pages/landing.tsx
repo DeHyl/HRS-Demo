@@ -77,7 +77,7 @@ export default function LandingPage() {
               <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#EAB308" }} />
               <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#3B82F6" }} />
             </div>
-            <span className="text-white/60 text-xs">A product by GroundGame</span>
+            <span className="text-white/60 text-xs">GameTime.ai</span>
           </div>
 
           <h1

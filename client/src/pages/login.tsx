@@ -108,7 +108,7 @@ export default function LoginPage() {
                 <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#EAB308" }} />
                 <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#3B82F6" }} />
               </div>
-              <span className="text-white/60 text-xs">A product by GroundGame</span>
+              <span className="text-white/60 text-xs">GameTime.ai</span>
             </div>
 
             <h1 className="text-5xl xl:text-6xl font-display font-black text-white mb-4 tracking-tighter leading-none">

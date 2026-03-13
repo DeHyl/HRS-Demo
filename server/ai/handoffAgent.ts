@@ -13,6 +13,7 @@ import { extractBANTFromTranscript } from './bantExtraction.js';
 import { handoverToSalesforce } from '../integrations/salesforceLeads.js';
 import { callClaudeWithRetry } from './claudeClient.js';
 import { getProductCatalogPrompt } from './productCatalog.js';
+import { sendFeedbackEmail } from '../google/gmailClient.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,6 +134,127 @@ Write the summary as a single paragraph the AE can read in 30 seconds before the
   }
 }
 
+// ─── Handoff email formatter ─────────────────────────────────────────────────
+
+function formatHandoffEmailBody(params: {
+  companyName: string;
+  contactName: string;
+  contactTitle: string | null;
+  budget: string | null;
+  timeline: string | null;
+  decisionMakers: string | null;
+  needs: string[];
+  productInterests: ProductInterest[];
+  handoffSummary: string;
+  salesforceId?: string;
+  manualNotes?: string;
+}): string {
+  const productRows = params.productInterests.length
+    ? params.productInterests
+        .map(
+          p => `<tr>
+            <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">${p.productName}</td>
+            <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">
+              <span style="background:${p.interestLevel === 'high' ? '#d1fae5' : p.interestLevel === 'medium' ? '#fef3c7' : '#f3f4f6'};
+                color:${p.interestLevel === 'high' ? '#065f46' : p.interestLevel === 'medium' ? '#92400e' : '#374151'};
+                padding:2px 8px;border-radius:9999px;font-size:12px;font-weight:600;">
+                ${p.interestLevel.toUpperCase()}
+              </span>
+            </td>
+            <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:13px;">${p.evidence}</td>
+          </tr>`
+        )
+        .join('')
+    : `<tr><td colspan="3" style="padding:12px;color:#9ca3af;text-align:center;">No specific products identified</td></tr>`;
+
+  return `
+<html>
+<head>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f9fafb; margin:0; padding:20px; color:#1f2937; }
+    .container { max-width:660px; margin:0 auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .header { background:#111827; color:#fff; padding:24px 32px; }
+    .header h1 { margin:0; font-size:20px; font-weight:700; }
+    .header .sub { color:#9ca3af; font-size:14px; margin-top:6px; }
+    .section { padding:24px 32px; border-bottom:1px solid #f3f4f6; }
+    .section h2 { margin:0 0 16px; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; }
+    .bant-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .bant-item { background:#f9fafb; border-radius:8px; padding:12px 16px; }
+    .bant-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; margin-bottom:4px; }
+    .bant-value { font-size:14px; color:#111827; }
+    .summary-box { background:#eff6ff; border-left:4px solid #3b82f6; padding:16px; border-radius:0 8px 8px 0; font-size:14px; line-height:1.7; color:#1e40af; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; padding:8px 12px; background:#f9fafb; font-size:12px; font-weight:700; text-transform:uppercase; color:#6b7280; border-bottom:2px solid #e5e7eb; }
+    .footer { padding:20px 32px; background:#f9fafb; text-align:center; font-size:12px; color:#9ca3af; }
+    .tag { display:inline-block; background:#e0e7ff; color:#3730a3; padding:3px 10px; border-radius:9999px; font-size:12px; font-weight:600; margin:2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤝 Qualified Lead Handoff — ${params.companyName}</h1>
+      <div class="sub">${params.contactName}${params.contactTitle ? ` · ${params.contactTitle}` : ''}</div>
+    </div>
+
+    <div class="section">
+      <h2>AE Briefing</h2>
+      <div class="summary-box">${params.handoffSummary}</div>
+    </div>
+
+    <div class="section">
+      <h2>BANT</h2>
+      <div class="bant-grid">
+        <div class="bant-item">
+          <div class="bant-label">Budget</div>
+          <div class="bant-value">${params.budget || '<em style="color:#9ca3af">Not discussed</em>'}</div>
+        </div>
+        <div class="bant-item">
+          <div class="bant-label">Timeline</div>
+          <div class="bant-value">${params.timeline || '<em style="color:#9ca3af">Not discussed</em>'}</div>
+        </div>
+        <div class="bant-item">
+          <div class="bant-label">Decision Makers</div>
+          <div class="bant-value">${params.decisionMakers || '<em style="color:#9ca3af">Not identified</em>'}</div>
+        </div>
+        <div class="bant-item">
+          <div class="bant-label">Key Needs</div>
+          <div class="bant-value">${params.needs.slice(0, 3).join('; ') || '<em style="color:#9ca3af">See notes</em>'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Product Interest</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Interest</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>${productRows}</tbody>
+      </table>
+    </div>
+
+    ${params.manualNotes ? `
+    <div class="section">
+      <h2>SDR Notes</h2>
+      <p style="font-size:14px;line-height:1.7;margin:0;">${params.manualNotes}</p>
+    </div>` : ''}
+
+    ${params.salesforceId ? `
+    <div class="section" style="border-bottom:none;">
+      <h2>CRM</h2>
+      <p style="margin:0;font-size:14px;">Salesforce Lead ID: <strong>${params.salesforceId}</strong></p>
+    </div>` : ''}
+
+    <div class="footer">Powered by GameTime.ai · Hawk Ridge Systems</div>
+  </div>
+</body>
+</html>`;
+}
+
 // ─── Main handoff function ────────────────────────────────────────────────────
 
 export async function runHandoffAgent(input: HandoffInput): Promise<HandoffResult> {
@@ -238,6 +360,36 @@ export async function runHandoffAgent(input: HandoffInput): Promise<HandoffResul
     }
   }
 
+  // Step 6 — Send handoff email to AE
+  let emailSent = false;
+  if (input.aeEmail) {
+    try {
+      const emailBody = formatHandoffEmailBody({
+        companyName: lead.companyName,
+        contactName: lead.contactName,
+        contactTitle: lead.contactTitle,
+        budget: bant.budget,
+        timeline: bant.timeline,
+        decisionMakers: bant.decisionMakers,
+        needs: bant.needs,
+        productInterests,
+        handoffSummary,
+        salesforceId,
+        manualNotes: input.manualNotes,
+      });
+
+      await sendFeedbackEmail({
+        to: input.aeEmail,
+        subject: `[Handoff] ${lead.companyName} — ${lead.contactName} is ready for you`,
+        body: emailBody,
+      });
+      emailSent = true;
+      console.log(`[HandoffAgent] Handoff email sent to ${input.aeEmail}`);
+    } catch (err) {
+      console.warn('[HandoffAgent] Email send failed:', (err as Error).message);
+    }
+  }
+
   return {
     agent: 'handoff',
     leadId: input.leadId,
@@ -253,7 +405,7 @@ export async function runHandoffAgent(input: HandoffInput): Promise<HandoffResul
     salesforcePushed,
     salesforceId,
     opportunityId,
-    emailSent: false, // Teams/email integration placeholder
+    emailSent,
     handoffSummary,
     durationMs: Date.now() - startedAt,
   };

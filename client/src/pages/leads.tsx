@@ -110,6 +110,8 @@ export default function LeadsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [hideGenericEmails, setHideGenericEmails] = useState(false);
   const [showQualifyDialog, setShowQualifyDialog] = useState(false);
+  const [showHandoffModal, setShowHandoffModal] = useState(false);
+  const [handoffForm, setHandoffForm] = useState({ aeEmail: "", manualNotes: "" });
   const [qualifyData, setQualifyData] = useState({
     qualificationNotes: "",
     buySignals: "",
@@ -253,20 +255,25 @@ export default function LeadsPage() {
   });
 
   const aiHandoffMutation = useMutation({
-    mutationFn: async (leadId: string) => {
+    mutationFn: async ({ leadId, aeEmail, manualNotes }: { leadId: string; aeEmail: string; manualNotes: string }) => {
       const res = await apiRequest("POST", `/api/agents/handoff/${leadId}`, {
         pushToSalesforce: true,
         convertToOpportunity: false,
+        ...(aeEmail && { aeEmail }),
+        ...(manualNotes && { manualNotes }),
       });
       return res.json();
     },
     onSuccess: async (data) => {
+      setShowHandoffModal(false);
+      setHandoffForm({ aeEmail: "", manualNotes: "" });
       await queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: `AI Handoff complete — ${data.companyName}`,
         description: [
           data.productInterests?.length ? `Products: ${data.productInterests.map((p: { productName: string }) => p.productName).join(', ')}` : null,
           data.budget ? `Budget: ${data.budget}` : null,
+          data.emailSent ? 'Email sent to AE ✓' : null,
           data.salesforcePushed ? 'Pushed to Salesforce ✓' : null,
         ].filter(Boolean).join(' · '),
       });
@@ -598,7 +605,7 @@ export default function LeadsPage() {
               onCall={() => handleCallLead(selectedLead)}
               onHandoff={() => setShowQualifyDialog(true)}
               isHandingOff={handoffMutation.isPending}
-              onAiHandoff={() => aiHandoffMutation.mutate(selectedLead.id)}
+              onAiHandoff={() => setShowHandoffModal(true)}
               isAiHandingOff={aiHandoffMutation.isPending}
             />
           ) : (
@@ -924,6 +931,70 @@ export default function LeadsPage() {
           </div>
           </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Handoff Modal */}
+      <Dialog open={showHandoffModal} onOpenChange={setShowHandoffModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              AI Handoff — {selectedLead?.companyName}
+            </DialogTitle>
+            <DialogDescription>
+              Extracts BANT from the last call, scores product interest, marks lead as qualified, and emails the AE.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="ae-email">AE Email <span className="text-muted-foreground text-xs">(optional — for handoff notification)</span></Label>
+              <Input
+                id="ae-email"
+                type="email"
+                placeholder="ae@hawkridgesys.com"
+                value={handoffForm.aeEmail}
+                onChange={(e) => setHandoffForm(prev => ({ ...prev, aeEmail: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sdr-notes">SDR Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <textarea
+                id="sdr-notes"
+                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Anything the AE should know before their first call..."
+                value={handoffForm.manualNotes}
+                onChange={(e) => setHandoffForm(prev => ({ ...prev, manualNotes: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowHandoffModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={aiHandoffMutation.isPending}
+              onClick={() => {
+                if (selectedLead) {
+                  aiHandoffMutation.mutate({
+                    leadId: selectedLead.id,
+                    aeEmail: handoffForm.aeEmail,
+                    manualNotes: handoffForm.manualNotes,
+                  });
+                }
+              }}
+            >
+              {aiHandoffMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {aiHandoffMutation.isPending ? "Processing..." : "Run AI Handoff"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

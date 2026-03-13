@@ -464,18 +464,25 @@ export function registerAgentRoutes(app: Express) {
       let inserted = 0;
       const insertedLeads = [];
 
+      const effectiveMinScore = criteria.minFitScore ?? 45;
+
       for (const prospect of prospectorResult.results) {
-        if (!prospect.qualifies || prospect.fitScore < (criteria.minFitScore ?? 55)) continue;
-        if (!prospect.contactName || prospect.contactName === 'Unknown') continue;
+        // Only hard-filter by score — skip the qualifies flag (too conservative with snippet-only data)
+        if (prospect.fitScore < effectiveMinScore) continue;
+
+        // Use a placeholder contact name when scraping didn't find one; SDR can enrich later
+        const contactName = (prospect.contactName && prospect.contactName !== 'Unknown')
+          ? prospect.contactName
+          : `Contact at ${prospect.companyName}`;
 
         try {
           const newLead = await storage.createLead({
             companyName: prospect.companyName,
             companyWebsite: prospect.companyWebsite || undefined,
             companyIndustry: prospect.companyIndustry,
-            contactName: prospect.contactName,
+            contactName,
             contactTitle: prospect.contactTitle || undefined,
-            contactEmail: prospect.contactEmail || `prospect@${(prospect.companyWebsite || 'unknown.com').replace(/https?:\/\//, '')}`,
+            contactEmail: prospect.contactEmail || undefined,
             contactPhone: prospect.contactPhone || undefined,
             contactLinkedIn: prospect.contactLinkedIn || undefined,
             source: 'ai-prospector',

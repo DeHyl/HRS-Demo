@@ -270,7 +270,7 @@ export async function runProspector(
 ): Promise<ProspectorRunResult> {
   const startedAt = Date.now();
   const maxResults = Math.min(criteria.maxResults || 20, 50);
-  const minFitScore = criteria.minFitScore ?? 55;
+  const minFitScore = criteria.minFitScore ?? 40;
 
   console.log(`[Prospector] Starting search: ${criteria.industry}${criteria.location ? ` in ${criteria.location}` : ''}`);
 
@@ -393,9 +393,10 @@ export async function runProspector(
     .filter((r): r is PromiseFulfilledResult<ProspectResult> => r.status === 'fulfilled')
     .map(r => r.value);
 
-  const qualified = results.filter(r => r.qualifies && r.fitScore >= minFitScore);
+  // Use score-only filter — the qualifies boolean is too conservative with snippet-only data
+  const qualified = results.filter(r => r.fitScore >= minFitScore);
 
-  console.log(`[Prospector] ${results.length} enriched, ${qualified.length} qualify (score >= ${minFitScore})`);
+  console.log(`[Prospector] ${results.length} enriched, ${qualified.length} qualify (score >= ${minFitScore}, total results: ${results.length})`);
 
   return {
     agent: 'prospector',

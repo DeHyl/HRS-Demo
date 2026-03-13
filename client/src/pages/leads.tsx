@@ -103,7 +103,7 @@ export default function LeadsPage() {
     contactTitle: "Engineering Manager",
     keywords: "",
     maxResults: 15,
-    minFitScore: 60,
+    minFitScore: 40,
   });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sortField, setSortField] = useState<SortField>("score");
@@ -244,10 +244,20 @@ export default function LeadsPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       setShowProspectorModal(false);
-      toast({
-        title: `Prospector complete — ${data.inserted} new leads added`,
-        description: `Discovered ${data.discovered} companies · ${data.qualified} qualified · ${data.skipped} skipped`,
-      });
+      if (data.inserted === 0) {
+        toast({
+          title: `Prospector found ${data.discovered} companies`,
+          description: data.discovered === 0
+            ? "No companies matched your search. Try a broader industry or lower the min score."
+            : `${data.qualified} passed scoring but none were inserted. Lower the Min Fit Score (try 30) or broaden the industry.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: `Prospector — ${data.inserted} new leads added`,
+          description: `Searched ${data.discovered} companies · ${data.qualified} qualified · ${data.skipped} below threshold`,
+        });
+      }
     },
     onError: () => {
       toast({ title: "Prospector failed", description: "Could not find leads", variant: "destructive" });

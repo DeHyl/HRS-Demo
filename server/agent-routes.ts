@@ -482,7 +482,7 @@ export function registerAgentRoutes(app: Express) {
             companyIndustry: prospect.companyIndustry,
             contactName,
             contactTitle: prospect.contactTitle || undefined,
-            contactEmail: prospect.contactEmail || undefined,
+            contactEmail: prospect.contactEmail || `prospect@${(prospect.companyWebsite || `${prospect.companyName.toLowerCase().replace(/\s+/g, '')}.com`).replace(/https?:\/\//, '')}`,
             contactPhone: prospect.contactPhone || undefined,
             contactLinkedIn: prospect.contactLinkedIn || undefined,
             source: 'ai-prospector',

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import { startGmailWatcher } from "./google/gmailWatcher.js";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -129,5 +130,7 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+    // Start Gmail watcher after server is ready
+    startGmailWatcher();
   });
 })();

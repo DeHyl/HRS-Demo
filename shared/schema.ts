@@ -658,3 +658,19 @@ export const leadResponseLog = pgTable("lead_response_log", {
 export const insertLeadResponseLogSchema = createInsertSchema(leadResponseLog).omit({ id: true, sentAt: true });
 export type InsertLeadResponseLog = z.infer<typeof insertLeadResponseLogSchema>;
 export type LeadResponseLog = typeof leadResponseLog.$inferSelect;
+
+// ─── Gmail Watcher — Processed Messages Log ───────────────────────────────────
+export const gmailProcessedMessages = pgTable("gmail_processed_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().unique(), // Gmail message ID
+  fromEmail: text("from_email").notNull(),
+  fromName: text("from_name"),
+  subject: text("subject"),
+  leadId: varchar("lead_id"),
+  autoReplied: boolean("auto_replied").default(false),
+  escalated: boolean("escalated").default(false),
+  engagementScore: integer("engagement_score"),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+});
+
+export type GmailProcessedMessage = typeof gmailProcessedMessages.$inferSelect;

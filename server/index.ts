@@ -130,7 +130,11 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
-    // Start Gmail watcher after server is ready
-    startGmailWatcher();
+    // Start Gmail watcher — non-blocking, never crashes the server
+    try {
+      startGmailWatcher();
+    } catch (err) {
+      console.warn("[GmailWatcher] Failed to start:", err instanceof Error ? err.message : err);
+    }
   });
 })();

@@ -7,7 +7,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getProductCatalogPrompt } from "./productCatalog.js";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
+  return new Anthropic({ apiKey });
+}
 
 export interface InboundEmailInput {
   from: string;    // "Brandon Zahn <brandonz@hawkridgesys.com>"
@@ -107,7 +111,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 
 Escalate to human when: engagementScore >= 4, OR they mention a budget, OR they mention a specific timeline, OR they ask to see a demo.`;
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 2500,
     messages: [{ role: "user", content: prompt }],

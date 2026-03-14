@@ -16,6 +16,7 @@ import { sendFeedbackEmail } from "./gmailClient.js";
 import { storage } from "../storage.js";
 import { db } from "../db.js";
 import { gmailProcessedMessages } from "@shared/schema";
+import { and, eq } from "drizzle-orm";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -169,7 +170,6 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
 
   const from = getHeader(headers, "from");
   const subject = getHeader(headers, "subject");
-  const to = getHeader(headers, "to");
   const labelIds: string[] = msg.labelIds || [];
 
   // Skip emails we sent, automated/noreply, or not in INBOX
@@ -184,6 +184,22 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
   if (!body || body.length < 20) {
     console.log(`[GmailWatcher] Skipping short/empty email from ${from}`);
     return;
+  }
+
+  // Check if this lead's thread is paused (human took over)
+  const existing = await db.select().from(gmailProcessedMessages)
+    .where(eq(gmailProcessedMessages.messageId, messageId)).limit(1);
+  if (existing[0]?.paused) return;
+
+  // Also check if any message in this thread is paused
+  if (msg.threadId) {
+    const pausedThread = await db.select().from(gmailProcessedMessages)
+      .where(and(eq(gmailProcessedMessages.threadId, msg.threadId), eq(gmailProcessedMessages.paused, true)))
+      .limit(1);
+    if (pausedThread.length > 0) {
+      console.log(`[GmailWatcher] Thread ${msg.threadId} is paused — skipping`);
+      return;
+    }
   }
 
   console.log(`[GmailWatcher] 📨 New email from ${from} — "${subject}"`);
@@ -221,6 +237,8 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
       isNewLead = true;
     }
 
+    let autoReplied = false;
+
     // Send AI-drafted reply
     if (analysis.suggestedResponse && !analysis.escalateToHuman) {
       await sendFeedbackEmail({
@@ -228,6 +246,7 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
         subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
         body: analysis.suggestedResponse.replace(/\n/g, "<br>"),
       });
+      autoReplied = true;
       console.log(`[GmailWatcher] ✅ Auto-replied to ${analysis.senderEmail} (lead ${isNewLead ? "created" : "existing"})`);
     } else if (analysis.escalateToHuman) {
       console.log(`[GmailWatcher] 🚨 Escalating to human: ${analysis.escalationReason}`);
@@ -241,7 +260,9 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
         fromName: analysis.senderName,
         subject,
         leadId: lead?.id || null,
-        autoReplied: !analysis.escalateToHuman,
+        replyBody: autoReplied ? analysis.suggestedResponse : null,
+        threadId: msg.threadId || null,
+        autoReplied,
         escalated: analysis.escalateToHuman,
         engagementScore: analysis.engagementScore,
       });

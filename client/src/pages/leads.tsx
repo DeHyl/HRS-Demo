@@ -2321,6 +2321,17 @@ function IntelCard({
         return;
       }
       
+      if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+        flushList();
+        const headingText = trimmed.replace(/^#+\s*/, '');
+        elements.push(
+          <p key={i} className="font-semibold text-sm mt-4 mb-1.5 text-foreground border-b border-border/50 pb-0.5">
+            {headingText}
+          </p>
+        );
+        return;
+      }
+
       if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\./.test(trimmed)) {
         const cleanText = trimmed.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, '');
         listItems.push(
@@ -2331,9 +2342,9 @@ function IntelCard({
         );
         return;
       }
-      
+
       flushList();
-      
+
       if (trimmed.endsWith(':') && trimmed.length < 60) {
         elements.push(
           <p key={i} className="font-medium text-sm mt-3 mb-1 text-foreground">

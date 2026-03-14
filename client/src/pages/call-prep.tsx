@@ -638,6 +638,13 @@ function CompactText({ content, lines = 6 }: { content: string | null; lines?: n
     <div className="space-y-1 text-sm">
       {displayLines.map((line, i) => {
         const trimmed = line.trim();
+        if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+          return (
+            <p key={i} className="font-semibold text-sm mt-3 mb-1 text-foreground border-b border-border/50 pb-0.5">
+              {trimmed.replace(/^#+\s*/, '')}
+            </p>
+          );
+        }
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\./.test(trimmed)) {
           const cleanText = trimmed.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, '');
           return (

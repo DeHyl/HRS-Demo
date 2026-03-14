@@ -635,3 +635,31 @@ export const leadStatusHistoryRelations = relations(leadStatusHistory, ({ one })
     references: [users.id],
   }),
 }));
+
+// ─── Lead Response Engine ─────────────────────────────────────────────────────
+// Logs every automated email sent by the Lead Response Engine
+
+export const leadResponseLog = pgTable("lead_response_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull(),          // Salesforce Lead ID
+  leadEmail: text("lead_email").notNull(),
+  leadName: text("lead_name"),
+  company: text("company"),
+  industry: text("industry"),
+  title: text("title"),
+  leadSource: text("lead_source"),
+  emailSubject: text("email_subject").notNull(),
+  emailBody: text("email_body").notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  status: text("status").notNull().default("sent"), // sent | bounced | opened | failed | skipped
+  qualScore: integer("qual_score"),               // 0–100
+  qualReason: text("qual_reason"),
+  processingMs: integer("processing_ms"),         // Pipeline duration in ms
+});
+
+export const insertLeadResponseLogSchema = createInsertSchema(leadResponseLog).omit({
+  id: true,
+  sentAt: true,
+});
+export type InsertLeadResponseLog = z.infer<typeof insertLeadResponseLogSchema>;
+export type LeadResponseLog = typeof leadResponseLog.$inferSelect;

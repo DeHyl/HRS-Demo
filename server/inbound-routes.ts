@@ -10,6 +10,9 @@ import { analyzeInboundEmail } from "./ai/inboundEmailAgent.js";
 import { storage } from "./storage.js";
 import { sendFeedbackEmail } from "./google/gmailClient.js";
 import { createNotification } from "./notificationService.js";
+import { db } from "./db.js";
+import { gmailProcessedMessages } from "@shared/schema";
+import { asc, desc, eq } from "drizzle-orm";
 
 export function registerInboundRoutes(app: Express, requireAuth: Function) {
   /**
@@ -105,6 +108,40 @@ export function registerInboundRoutes(app: Express, requireAuth: Function) {
       console.error("[InboundAgent] Error:", err);
       res.status(500).json({ message: "Failed to process inbound email", detail: err?.message });
     }
+  });
+
+
+  // GET /api/inbound/activity — all processed emails with lead info, sorted by recent
+  app.get("/api/inbound/activity", requireAuth, async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 100;
+    const logs = await db.select().from(gmailProcessedMessages)
+      .orderBy(desc(gmailProcessedMessages.processedAt))
+      .limit(limit);
+    res.json(logs);
+  });
+
+  // GET /api/inbound/thread/:threadId — all messages in a thread
+  app.get("/api/inbound/thread/:threadId", requireAuth, async (req: Request, res: Response) => {
+    const messages = await db.select().from(gmailProcessedMessages)
+      .where(eq(gmailProcessedMessages.threadId, req.params.threadId))
+      .orderBy(asc(gmailProcessedMessages.processedAt));
+    res.json(messages);
+  });
+
+  // PATCH /api/inbound/thread/:threadId/takeover — human takes over, AI stops
+  app.patch("/api/inbound/thread/:threadId/takeover", requireAuth, async (req: Request, res: Response) => {
+    const { paused } = req.body; // true = pause AI, false = resume AI
+    const nextPaused = paused ?? true;
+
+    await db.update(gmailProcessedMessages)
+      .set({
+        paused: nextPaused,
+        pausedBy: nextPaused ? req.session.userId : null,
+        pausedAt: nextPaused ? new Date() : null,
+      })
+      .where(eq(gmailProcessedMessages.threadId, req.params.threadId));
+
+    res.json({ success: true, paused: nextPaused });
   });
 
   /**

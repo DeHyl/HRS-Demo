@@ -868,7 +868,8 @@ Return ONLY valid JSON (no markdown, no explanation outside the JSON):
 
   let parsed: { fitScore: number; priority: string; qualifies: boolean; disqualificationReason?: string; reasoning: string };
   try {
-    parsed = JSON.parse(text.trim());
+    const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```$/i, '');
+    parsed = JSON.parse(clean);
   } catch {
     // Fallback if JSON parse fails
     parsed = { fitScore: 50, priority: 'cool', qualifies: true, reasoning: 'Could not parse AI response — defaulting to manual review.' };

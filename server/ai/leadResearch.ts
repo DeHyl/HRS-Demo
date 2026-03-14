@@ -57,7 +57,7 @@ export interface DeepResearchData {
   websiteDeep: CompanyWebsiteData | null;
 }
 
-const BSA_SOLUTIONS_CONTEXT = getProductCatalogPrompt();
+const HRS_PRODUCT_CATALOG_CONTEXT = getProductCatalogPrompt();
 
 export interface ProductMatch {
   productId: string;
@@ -420,9 +420,9 @@ ${scraped.scoringParams.substring(0, 4000)}` : "";
     ? "\n\n🔬 RESEARCH MODE: DEEP - Enhanced intelligence gathered via headless browser scraping. Use this additional data to provide more detailed insights.\n"
     : "";
 
-  const prompt = `You are an expert B2B sales intelligence analyst preparing a COMPREHENSIVE dossier for a sales call to sell BSA Solutions services.${researchModeNote}
+  const prompt = `You are an expert B2B sales intelligence analyst preparing a COMPREHENSIVE dossier for a sales call to sell Hawk Ridge Systems (HRS) engineering software and hardware.${researchModeNote}
 
-${BSA_SOLUTIONS_CONTEXT}
+${HRS_PRODUCT_CATALOG_CONTEXT}
 
 ## LEAD INFORMATION:
 - Contact Name: ${lead.contactName}
@@ -464,14 +464,14 @@ Return a JSON object with these EXACT keys:
   ],
   
   "painPoints": [
-    {"pain": "Specific challenge they face based on their industry/size", "severity": "high", "bsaSolution": "Dedicated offshore team"},
-    {"pain": "Another pain point", "severity": "medium", "bsaSolution": "Finance and Accounting Support"},
-    {"pain": "Third pain point", "severity": "low", "bsaSolution": "IT and Engineering Specialists"}
+    {"pain": "Specific challenge they face based on their industry/size", "severity": "high", "hrsSolution": "SOLIDWORKS Premium with built-in FEA"},
+    {"pain": "Another pain point", "severity": "medium", "hrsSolution": "SOLIDWORKS PDM Professional"},
+    {"pain": "Third pain point", "severity": "low", "hrsSolution": "Markforged Composite Printer"}
   ],
-  
+
   "productMatches": [
-    {"productId": "customer-support-team", "productName": "Customer Support Team", "category": "Customer Experience", "matchScore": 90, "rationale": "Why this service fits their needs", "valueProposition": "How it will help them specifically"},
-    {"productId": "virtual-assistant-team", "productName": "Virtual Assistant Team", "category": "Administrative Support", "matchScore": 85, "rationale": "Why VAs would help", "valueProposition": "Specific value"}
+    {"productId": "solidworks-professional", "productName": "SOLIDWORKS Professional", "category": "CAD Software", "matchScore": 90, "rationale": "Why this HRS product fits their engineering needs", "valueProposition": "How it will help them specifically"},
+    {"productId": "solidworks-pdm-professional", "productName": "SOLIDWORKS PDM Professional", "category": "PDM / Data Management", "matchScore": 75, "rationale": "Why data management addresses their pain", "valueProposition": "Specific value for their team size"}
   ],
 
   "techStackIntel": [
@@ -521,10 +521,10 @@ Return a JSON object with these EXACT keys:
   ],
   
   "objectionHandles": [
-    {"objection": "We've had bad experiences with outsourcing", "response": "Specific response about BSA's Great Place to Work certification and quality focus"},
-    {"objection": "Budget is tight", "response": "ROI-focused response highlighting 60-70% cost savings"},
-    {"objection": "Concerned about communication/time zones", "response": "Response about 95% English proficiency and flexible coverage options"},
-    {"objection": "Need to involve others", "response": "Champion enablement response with case studies and references"}
+    {"objection": "We already use Autodesk/Inventor", "response": "Specific response about SOLIDWORKS' superior manufacturing ecosystem and CAMWorks integration"},
+    {"objection": "Budget is tight", "response": "ROI-focused response: reduced physical prototypes, faster time-to-market, lower total cost vs. separate CAD+FEA+PDM tools"},
+    {"objection": "Our team is used to the current tools", "response": "Response about HRS training, local offices, and 25-year track record with 23,000+ customers"},
+    {"objection": "Need to involve IT/management", "response": "Champion enablement response with HRS case studies from same industry"}
   ],
   
   "theAsk": "The specific next step to propose based on their likely readiness and situation",

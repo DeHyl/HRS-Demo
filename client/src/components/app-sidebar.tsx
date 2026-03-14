@@ -12,7 +12,8 @@ import {
   Target,
   Calculator,
   Activity,
-  TrendingUp
+  TrendingUp,
+  Map
 } from "lucide-react";
 import {
   Sidebar,
@@ -79,6 +80,12 @@ const mainNavItems = [
     title: "AE Pipeline",
     url: "/ae-pipeline",
     icon: Target,
+    allowedRoles: ["admin", "manager", "account_executive"],
+  },
+  {
+    title: "AM Workspace",
+    url: "/am-workspace",
+    icon: Map,
     allowedRoles: ["admin", "manager", "account_executive"],
   },
   {

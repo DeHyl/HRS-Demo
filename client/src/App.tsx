@@ -30,6 +30,7 @@ import AEProfilePage from "@/pages/ae-profile";
 import ReportsPage from "@/pages/reports";
 import ManagerDashboard from "@/pages/manager-dashboard";
 import AEPipelinePage from "@/pages/ae-pipeline";
+import AMWorkspacePage from "@/pages/am-workspace";
 import BudgetingPage from "@/pages/budgeting";
 import SettingsPage from "@/pages/settings";
 import LearningPage from "@/pages/learning";
@@ -259,6 +260,14 @@ function Router() {
         <ProtectedRoute allowedRoles={["admin", "manager", "account_executive"]}>
           <DashboardLayout>
             <AEPipelinePage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/am-workspace">
+        <ProtectedRoute allowedRoles={["admin", "manager", "account_executive"]}>
+          <DashboardLayout>
+            <AMWorkspacePage />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

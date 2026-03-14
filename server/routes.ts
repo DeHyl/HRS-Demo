@@ -14,6 +14,7 @@ import { z } from "zod";
 import { registerTwilioVoiceRoutes } from "./twilio-voice";
 import { registerTranscriptionRoutes, setupTranscriptionWebSocket } from "./transcription";
 import { registerLeadsRoutes } from "./leads-routes";
+import { registerAmRoutes } from "./am-routes";
 import { registerCoachRoutes } from "./coach-routes";
 import { registerSalesforceRoutes } from "./salesforce-routes";
 import { registerSupportRoutes } from "./support-routes";
@@ -3805,6 +3806,7 @@ export async function registerRoutes(
   });
 
   registerLeadsRoutes(app, requireAuth);
+  registerAmRoutes(app, requireAuth);
   registerCoachRoutes(app, requireAuth);
   registerSalesforceRoutes(app, requireAuth);
   registerSupportRoutes(app);

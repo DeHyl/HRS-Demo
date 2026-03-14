@@ -384,7 +384,7 @@ export default function LeadsPage() {
             ) : (
               <Sparkles className="h-4 w-4 mr-2" />
             )}
-            {scrubMutation.isPending ? "Scrubbing..." : "Scrub New"}
+            {scrubMutation.isPending ? "Scoring..." : "Score Leads"}
           </Button>
           <Button
             size="sm"

@@ -13,7 +13,8 @@ import {
   Calculator,
   Activity,
   TrendingUp,
-  Map
+  Map,
+  Inbox
 } from "lucide-react";
 import {
   Sidebar,
@@ -87,6 +88,12 @@ const mainNavItems = [
     url: "/am-workspace",
     icon: Map,
     allowedRoles: ["admin", "manager", "account_executive"],
+  },
+  {
+    title: "Inbound Emails",
+    url: "/inbound-emails",
+    icon: Inbox,
+    allowedRoles: ["admin", "manager", "sdr"],
   },
   {
     title: "Budgeting",

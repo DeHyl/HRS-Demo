@@ -31,6 +31,7 @@ import ReportsPage from "@/pages/reports";
 import ManagerDashboard from "@/pages/manager-dashboard";
 import AEPipelinePage from "@/pages/ae-pipeline";
 import AMWorkspacePage from "@/pages/am-workspace";
+import InboundEmailsPage from "@/pages/inbound-emails";
 import BudgetingPage from "@/pages/budgeting";
 import SettingsPage from "@/pages/settings";
 import LearningPage from "@/pages/learning";
@@ -268,6 +269,14 @@ function Router() {
         <ProtectedRoute allowedRoles={["admin", "manager", "account_executive"]}>
           <DashboardLayout>
             <AMWorkspacePage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/inbound-emails">
+        <ProtectedRoute allowedRoles={["admin", "manager", "sdr"]}>
+          <DashboardLayout>
+            <InboundEmailsPage />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

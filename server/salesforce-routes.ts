@@ -13,6 +13,11 @@ import {
   getSyncLogs,
 } from "./integrations/salesforceLeads";
 import { storage } from "./storage";
+import { quickScoreLead } from "./ai/quickLeadQualifier";
+import { generateLeadResponseEmail } from "./ai/leadResponseEmailGenerator";
+import { sendFeedbackEmail } from "./google/gmailClient";
+import { db } from "./db";
+import { leadResponseLog } from "@shared/schema";
 
 export function registerSalesforceRoutes(
   app: Express,
@@ -160,6 +165,88 @@ export function registerSalesforceRoutes(
     } catch (error) {
       console.error("[Salesforce] Sync logs error:", error);
       res.status(500).json({ message: "Failed to fetch sync logs" });
+    }
+  });
+
+  // ─── Lead Response Engine — Inbound Webhook ────────────────────────────────
+  // Salesforce calls this when a new Lead is created.
+  // Responds immediately to SF, runs pipeline async.
+  app.post("/api/salesforce/webhook/lead-created", async (req: Request, res: Response) => {
+    res.status(200).json({ received: true });
+
+    const startTime = Date.now();
+    const leadData = req.body;
+
+    const expectedSecret = process.env.SALESFORCE_WEBHOOK_SECRET;
+    if (expectedSecret && req.headers["x-salesforce-webhook-secret"] !== expectedSecret) {
+      console.warn("[LeadResponse] Webhook secret mismatch — ignoring");
+      return;
+    }
+
+    const leadId = leadData.Id || leadData.id || "unknown";
+    const email = leadData.Email || leadData.email;
+
+    if (!email) {
+      console.log(`[LeadResponse] Skipping ${leadId} — no email`);
+      return;
+    }
+
+    console.log(`[LeadResponse] Processing lead ${leadId} (${email})`);
+
+    try {
+      const qualification = await quickScoreLead(leadData);
+      console.log(`[LeadResponse] Score ${qualification.score}: ${qualification.reason}`);
+
+      if (!qualification.shouldRespond) {
+        await db.insert(leadResponseLog).values({
+          leadId, leadEmail: email,
+          leadName: `${leadData.FirstName || ""} ${leadData.LastName || ""}`.trim() || null,
+          company: leadData.Company || null, industry: leadData.Industry || null,
+          title: leadData.Title || null, leadSource: leadData.LeadSource || null,
+          emailSubject: "N/A", emailBody: "Skipped — below threshold",
+          status: "skipped", qualScore: qualification.score,
+          qualReason: qualification.reason, processingMs: Date.now() - startTime,
+        });
+        return;
+      }
+
+      const emailContent = await generateLeadResponseEmail(leadData);
+      await sendFeedbackEmail({ to: email, subject: emailContent.subject, body: emailContent.body });
+
+      await db.insert(leadResponseLog).values({
+        leadId, leadEmail: email,
+        leadName: `${leadData.FirstName || ""} ${leadData.LastName || ""}`.trim() || null,
+        company: leadData.Company || null, industry: leadData.Industry || null,
+        title: leadData.Title || null, leadSource: leadData.LeadSource || null,
+        emailSubject: emailContent.subject, emailBody: emailContent.body,
+        status: "sent", qualScore: qualification.score,
+        qualReason: qualification.reason, processingMs: Date.now() - startTime,
+      });
+
+      console.log(`[LeadResponse] ✅ Responded to ${email} in ${Date.now() - startTime}ms`);
+    } catch (err) {
+      console.error(`[LeadResponse] Pipeline error for ${leadId}:`, err instanceof Error ? err.message : err);
+      try {
+        await db.insert(leadResponseLog).values({
+          leadId, leadEmail: email, emailSubject: "N/A",
+          emailBody: `Error: ${err instanceof Error ? err.message : String(err)}`,
+          status: "failed", processingMs: Date.now() - startTime,
+        });
+      } catch (_) {}
+    }
+  });
+
+  // ─── Lead Response Engine — Admin Log View ─────────────────────────────────
+  app.get("/api/lead-responses", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { desc } = await import("drizzle-orm");
+      const limit = parseInt(req.query.limit as string) || 50;
+      const logs = await db.select().from(leadResponseLog)
+        .orderBy(desc(leadResponseLog.sentAt)).limit(limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("[LeadResponse] Fetch logs error:", error);
+      res.status(500).json({ message: "Failed to fetch lead response logs" });
     }
   });
 }

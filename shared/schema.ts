@@ -635,3 +635,26 @@ export const leadStatusHistoryRelations = relations(leadStatusHistory, ({ one })
     references: [users.id],
   }),
 }));
+
+// ─── Lead Response Engine ─────────────────────────────────────────────────────
+export const leadResponseLog = pgTable("lead_response_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull(),
+  leadEmail: text("lead_email").notNull(),
+  leadName: text("lead_name"),
+  company: text("company"),
+  industry: text("industry"),
+  title: text("title"),
+  leadSource: text("lead_source"),
+  emailSubject: text("email_subject").notNull(),
+  emailBody: text("email_body").notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  status: text("status").notNull().default("sent"),
+  qualScore: integer("qual_score"),
+  qualReason: text("qual_reason"),
+  processingMs: integer("processing_ms"),
+});
+
+export const insertLeadResponseLogSchema = createInsertSchema(leadResponseLog).omit({ id: true, sentAt: true });
+export type InsertLeadResponseLog = z.infer<typeof insertLeadResponseLogSchema>;
+export type LeadResponseLog = typeof leadResponseLog.$inferSelect;

@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import { insertLeadSchema, type Lead } from "@shared/schema";
 import { z } from "zod";
 import { fetchLeadsFromSheet, parseLeadsFromSheet, detectColumnMapping, getSpreadsheetInfo } from "./google/sheetsClient";
-import { researchLead, type ResearchOptions } from "./ai/leadResearch";
+import { researchLead, scrubLead, type ResearchOptions } from "./ai/leadResearch";
 import { extractQualificationFromTranscript, QualificationDraft } from "./ai/qualificationExtractor";
 import { notifyLeadStatusChange, notifyLeadQualified, notifyManagersOfQualifiedLead, notifyAEHandoff, notifyResearchReady } from "./notificationService";
 import { notifyResearchComplete } from "./dashboardUpdates";
@@ -21,6 +21,24 @@ const researchLimit = pLimit(2);
 
 // Track research in progress to prevent duplicate work
 const researchInProgress = new Set<string>();
+
+// Lightweight auto-scoring: runs scrubLead() and writes fitScore + priority back to the lead.
+// Fast (~1-2s). Called on every new lead creation so leads are never score-less.
+export async function autoScoreLead(lead: Lead): Promise<Lead> {
+  try {
+    const result = await scrubLead(lead);
+    const updated = await storage.updateLead(lead.id, {
+      fitScore: result.fitScore,
+      priority: result.priority,
+      ...(result.disqualificationReason ? { disqualificationReason: result.disqualificationReason } : {}),
+    });
+    console.log(`[AutoScore] ${lead.companyName} → ${result.fitScore} (${result.priority}) [${result.durationMs}ms]`);
+    return updated || lead;
+  } catch (err) {
+    console.warn(`[AutoScore] Failed for ${lead.id} (${lead.companyName}):`, (err as Error).message);
+    return lead;
+  }
+}
 
 // Shared helper for processing lead research with all guardrails
 export async function processLeadResearch(
@@ -253,16 +271,19 @@ export function registerLeadsRoutes(app: Express, requireAuth: (req: Request, re
         return res.status(400).json({ message: "Lead with this email already exists" });
       }
       
-      const lead = await storage.createLead(validatedData);
-      
-      // Auto-trigger research in background (non-blocking)
+      let lead = await storage.createLead(validatedData);
+
+      // Auto-score synchronously (fast, ~1-2s) so the response already includes fitScore + priority
+      lead = await autoScoreLead(lead);
+
+      // Auto-trigger full dossier research in background (non-blocking, slow)
       if (lead.companyName || lead.companyWebsite) {
         console.log(`[AutoResearch] Triggering auto-research for new lead: ${lead.contactName || lead.companyName}`);
         processLeadResearch(lead).catch(err => {
           console.error(`[AutoResearch] Failed for ${lead.id}:`, err.message);
         });
       }
-      
+
       res.status(201).json(lead);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -413,10 +434,19 @@ export function registerLeadsRoutes(app: Express, requireAuth: (req: Request, re
       }
       
       const createdLeads = await storage.createLeads(newLeads);
-      
+
+      // Auto-score all imported leads in background (lightweight, no rate-limit concern)
+      if (createdLeads.length > 0) {
+        console.log(`[AutoScore] Queuing ${createdLeads.length} imported leads for background scoring`);
+        const scoreLimit = pLimit(3); // 3 concurrent score calls
+        Promise.all(createdLeads.map(lead => scoreLimit(() => autoScoreLead(lead)))).catch(err => {
+          console.error('[AutoScore] Batch scoring error:', err.message);
+        });
+      }
+
       const AUTO_RESEARCH_THRESHOLD = 10;
       const requiresApproval = createdLeads.length > AUTO_RESEARCH_THRESHOLD;
-      
+
       if (createdLeads.length > 0 && !requiresApproval) {
         console.log(`[AutoResearch] Queueing ${createdLeads.length} leads for background research`);
         processResearchQueue(createdLeads).catch(err => {

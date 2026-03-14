@@ -1155,9 +1155,14 @@ function LeadListItem({
             <span className="font-medium text-sm truncate">{lead.contactName}</span>
             {getPriorityIcon(lead.priority)}
           </div>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {lead.companyName}
-          </p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-xs text-muted-foreground truncate">{lead.companyName}</p>
+            {lead.source === 'ai-prospector' && (
+              <span className="shrink-0 text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-1.5 py-0.5 rounded" title="Found by Prospector Agent">
+                AI
+              </span>
+            )}
+          </div>
           {lastContactInfo && (
             <div className={`flex items-center gap-1 mt-1 text-xs ${lastContactInfo.color}`}>
               <lastContactInfo.icon className="h-3 w-3" />
@@ -2513,7 +2518,7 @@ function AddLeadModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
         companyName: formData.companyName.trim(),
         contactTitle: formData.contactTitle.trim() || null,
         contactPhone: formData.contactPhone.trim() || null,
-        companyWebsite: formData.companyWebsite.trim() || null,
+        companyWebsite: (() => { const w = formData.companyWebsite.trim(); return w ? (w.startsWith('http') ? w : `https://${w}`) : null; })(),
         contactLinkedIn: formData.contactLinkedIn.trim() || null,
         source: "manual",
         status: "new",
@@ -2609,7 +2614,7 @@ function AddLeadModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
             <Label htmlFor="companyWebsite">Company Website</Label>
             <Input
               id="companyWebsite"
-              type="url"
+              type="text"
               placeholder="https://company.com"
               value={formData.companyWebsite}
               onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}

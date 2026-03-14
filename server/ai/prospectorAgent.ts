@@ -164,12 +164,14 @@ async function searchGoogleCompanies(criteria: ProspectSearchCriteria): Promise<
   const keywordsHint = criteria.keywords?.length ? ` ${criteria.keywords.join(' ')}` : '';
   const titleHint = criteria.contactTitle ? ` "${criteria.contactTitle}"` : '';
 
-  const query = `${criteria.industry}${locationHint} company${sizeHint}${keywordsHint}${titleHint} -site:linkedin.com -site:indeed.com -site:glassdoor.com`;
+  const query = `${criteria.industry}${locationHint} company${sizeHint}${keywordsHint}${titleHint} -site:linkedin.com -site:indeed.com -site:glassdoor.com -site:ziprecruiter.com -site:monster.com`;
 
   const results = await googleSearch(query, 15);
 
+  const JOB_NOISE = /\b(jobs?|hiring|careers?|employment|staffing|recruiting|talent acquisition|work at|now hiring|job board)\b/i;
+
   return results
-    .filter(r => r.link && !r.link.includes('linkedin.com') && !r.link.includes('indeed.com'))
+    .filter(r => r.link && !r.link.includes('linkedin.com') && !r.link.includes('indeed.com') && !JOB_NOISE.test(r.title))
     .map(r => {
       let domain: string | null = null;
       try {

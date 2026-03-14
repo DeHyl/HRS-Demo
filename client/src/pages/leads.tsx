@@ -1152,7 +1152,11 @@ function LeadListItem({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm truncate">{lead.contactName}</span>
+            {lead.contactName?.startsWith('Contact at ') ? (
+              <span className="text-sm truncate text-muted-foreground italic">No contact yet</span>
+            ) : (
+              <span className="font-medium text-sm truncate">{lead.contactName}</span>
+            )}
             {getPriorityIcon(lead.priority)}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -1696,11 +1700,19 @@ function IntelDossier({ packet, lead }: { packet: ResearchPacket; lead: LeadWith
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           <Clock className="h-3 w-3" />
           <span>Updated {formatDate(packet.updatedAt)}</span>
           <span className="mx-1">|</span>
           <span>{packet.sources}</span>
+          {(() => {
+            const ageDays = Math.floor((Date.now() - new Date(packet.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+            return ageDays > 30 ? (
+              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                ⚠ {ageDays}d old — refresh recommended
+              </span>
+            ) : null;
+          })()}
         </div>
         
         <div className="flex items-center gap-3">

@@ -15,6 +15,7 @@ import { analyzeInboundEmail } from "../ai/inboundEmailAgent.js";
 import { sendFeedbackEmail } from "./gmailClient.js";
 import { storage } from "../storage.js";
 import { db } from "../db.js";
+import { and, eq } from "drizzle-orm";
 import { gmailProcessedMessages } from "@shared/schema";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -167,6 +168,22 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
   const msg = msgRes.data;
   const headers = msg.payload?.headers || [];
 
+  // Check if this lead's thread is paused (human took over)
+  const existing = await db.select().from(gmailProcessedMessages)
+    .where(eq(gmailProcessedMessages.messageId, messageId)).limit(1);
+  if (existing[0]?.paused) return;
+
+  // Also check if any message in this thread is paused
+  if (msg.threadId) {
+    const pausedThread = await db.select().from(gmailProcessedMessages)
+      .where(and(eq(gmailProcessedMessages.threadId, msg.threadId), eq(gmailProcessedMessages.paused, true)))
+      .limit(1);
+    if (pausedThread.length > 0) {
+      console.log(`[GmailWatcher] Thread ${msg.threadId} is paused — skipping`);
+      return;
+    }
+  }
+
   const from = getHeader(headers, "from");
   const subject = getHeader(headers, "subject");
   const to = getHeader(headers, "to");
@@ -241,6 +258,8 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
         fromName: analysis.senderName,
         subject,
         leadId: lead?.id || null,
+        replyBody: analysis.suggestedResponse,
+        threadId: msg.threadId || null,
         autoReplied: !analysis.escalateToHuman,
         escalated: analysis.escalateToHuman,
         engagementScore: analysis.engagementScore,

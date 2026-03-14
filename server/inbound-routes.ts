@@ -10,6 +10,9 @@ import { analyzeInboundEmail } from "./ai/inboundEmailAgent.js";
 import { storage } from "./storage.js";
 import { sendFeedbackEmail } from "./google/gmailClient.js";
 import { createNotification } from "./notificationService.js";
+import { db } from "./db.js";
+import { asc, desc, eq } from "drizzle-orm";
+import { gmailProcessedMessages } from "@shared/schema";
 
 export function registerInboundRoutes(app: Express, requireAuth: Function) {
   /**
@@ -119,6 +122,40 @@ export function registerInboundRoutes(app: Express, requireAuth: Function) {
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch inbound leads" });
     }
+  });
+
+
+  // GET /api/inbound/activity — all processed emails with lead info, sorted by recent
+  app.get("/api/inbound/activity", requireAuth, async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 100;
+    const logs = await db.select().from(gmailProcessedMessages)
+      .orderBy(desc(gmailProcessedMessages.processedAt))
+      .limit(limit);
+    res.json(logs);
+  });
+
+  // GET /api/inbound/thread/:threadId — all messages in a thread
+  app.get("/api/inbound/thread/:threadId", requireAuth, async (req: Request, res: Response) => {
+    const messages = await db.select().from(gmailProcessedMessages)
+      .where(eq(gmailProcessedMessages.threadId, req.params.threadId))
+      .orderBy(asc(gmailProcessedMessages.processedAt));
+    res.json(messages);
+  });
+
+  // PATCH /api/inbound/thread/:threadId/takeover — human takes over, AI stops
+  app.patch("/api/inbound/thread/:threadId/takeover", requireAuth, async (req: Request, res: Response) => {
+    const { paused } = req.body; // true = pause AI, false = resume AI
+    const pausedValue = paused ?? true;
+
+    await db.update(gmailProcessedMessages)
+      .set({
+        paused: pausedValue,
+        pausedBy: pausedValue ? req.session.userId : null,
+        pausedAt: pausedValue ? new Date() : null,
+      })
+      .where(eq(gmailProcessedMessages.threadId, req.params.threadId));
+
+    res.json({ success: true, paused: pausedValue });
   });
 
   /**

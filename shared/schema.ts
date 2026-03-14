@@ -667,10 +667,17 @@ export const gmailProcessedMessages = pgTable("gmail_processed_messages", {
   fromName: text("from_name"),
   subject: text("subject"),
   leadId: varchar("lead_id"),
+  replyBody: text("reply_body"), // What Robin actually sent
+  threadId: varchar("thread_id"), // Gmail thread ID (for grouping)
   autoReplied: boolean("auto_replied").default(false),
   escalated: boolean("escalated").default(false),
   engagementScore: integer("engagement_score"),
+  paused: boolean("paused").default(false), // true = human took over, AI stops responding
+  pausedBy: varchar("paused_by"), // userId who took over
+  pausedAt: timestamp("paused_at"),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
 
+export const insertGmailProcessedMessageSchema = createInsertSchema(gmailProcessedMessages).omit({ id: true, processedAt: true });
+export type InsertGmailProcessedMessage = z.infer<typeof insertGmailProcessedMessageSchema>;
 export type GmailProcessedMessage = typeof gmailProcessedMessages.$inferSelect;

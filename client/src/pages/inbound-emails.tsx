@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Inbox,
   Sparkles,
@@ -23,6 +27,7 @@ import {
   ChevronUp,
   Clock,
   Tag,
+  ArrowLeft,
 } from "lucide-react";
 
 interface EmailAnalysis {
@@ -46,6 +51,33 @@ interface AnalysisResult {
   lead: { id: string; companyName: string; priority: string } | null;
   isNewLead: boolean;
   autoReplySent: boolean;
+}
+
+interface InboundActivityThread {
+  id: string;
+  threadId?: string;
+  senderName?: string;
+  senderEmail?: string;
+  company?: string;
+  companyName?: string;
+  lastMessagePreview?: string;
+  snippet?: string;
+  lastActivityAt?: string;
+  status?: "ai_active" | "human" | "escalated" | "awaiting_reply";
+  fitScore?: number;
+  engagementScore?: number;
+  productsAsked?: string[];
+  intent?: string;
+}
+
+interface ThreadMessage {
+  id?: string;
+  role?: "prospect" | "ai" | "human";
+  from?: string;
+  subject?: string;
+  body?: string;
+  createdAt?: string;
+  timestamp?: string;
 }
 
 // Pre-loaded SalesApe demo scenario
@@ -108,6 +140,8 @@ export default function InboundEmailsPage() {
   const [showRawEmail, setShowRawEmail] = useState(false);
   const [editedResponse, setEditedResponse] = useState("");
   const [isEditingResponse, setIsEditingResponse] = useState(false);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [manualReply, setManualReply] = useState("");
 
   // Load inbound email leads queue
   const { data: inboundLeads = [] } = useQuery({
@@ -115,6 +149,34 @@ export default function InboundEmailsPage() {
     queryFn: () =>
       fetch("/api/inbound/emails", { credentials: "include" }).then((r) => r.json()),
   });
+
+  const {
+    data: activity = [],
+    isLoading: isLoadingActivity,
+  } = useQuery<InboundActivityThread[]>({
+    queryKey: ["inbound-activity"],
+    queryFn: () =>
+      fetch("/api/inbound/activity", { credentials: "include" }).then((r) => r.json()),
+    refetchInterval: 30000,
+  });
+
+  const {
+    data: thread = [],
+    isLoading: isLoadingThread,
+  } = useQuery<ThreadMessage[]>({
+    queryKey: ["inbound-thread", selectedThreadId],
+    queryFn: () =>
+      fetch(`/api/inbound/thread/${selectedThreadId}`, { credentials: "include" }).then((r) =>
+        r.json(),
+      ),
+    enabled: !!selectedThreadId,
+    refetchInterval: 15000,
+  });
+
+  const selectedThread = useMemo(
+    () => activity.find((item) => (item.threadId || item.id) === selectedThreadId),
+    [activity, selectedThreadId],
+  );
 
   const analyzeMutation = useMutation({
     mutationFn: async (payload: { from: string; subject: string; body: string }) => {
@@ -168,6 +230,102 @@ export default function InboundEmailsPage() {
       });
     },
   });
+
+  const manualReplyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/inbound/email/send-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          to: selectedThread?.senderEmail,
+          subject: `Re: ${thread[thread.length - 1]?.subject || "(no subject)"}`,
+          body: manualReply,
+        }),
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.sent ? "Manual reply sent" : "Gmail not connected",
+        description: data.sent
+          ? `Sent to ${selectedThread?.senderEmail}`
+          : "Copy the reply and send manually",
+      });
+      if (data.sent) {
+        setManualReply("");
+      }
+      queryClient.invalidateQueries({ queryKey: ["inbound-thread", selectedThreadId] });
+      queryClient.invalidateQueries({ queryKey: ["inbound-activity"] });
+    },
+  });
+
+  const takeoverMutation = useMutation({
+    mutationFn: async (paused: boolean) => {
+      const res = await fetch(`/api/inbound/thread/${selectedThreadId}/takeover`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paused }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update thread mode");
+      }
+      return res.json();
+    },
+    onSuccess: (_, paused) => {
+      toast({
+        title: paused ? "AI paused" : "AI resumed",
+        description: paused
+          ? "You have taken over this thread."
+          : "Robin is now handling the thread again.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["inbound-thread", selectedThreadId] });
+      queryClient.invalidateQueries({ queryKey: ["inbound-activity"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const formatRelativeTime = (value?: string) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  };
+
+  const getInitials = (name?: string, email?: string) => {
+    if (name?.trim()) {
+      return name
+        .split(" ")
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase();
+    }
+    return email?.[0]?.toUpperCase() || "?";
+  };
+
+  const getStatusBadge = (status?: InboundActivityThread["status"]) => {
+    switch (status) {
+      case "human":
+        return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30">👤 Human</Badge>;
+      case "escalated":
+        return <Badge className="bg-red-500/15 text-red-400 border-red-500/30">🚨 Escalated</Badge>;
+      case "awaiting_reply":
+        return <Badge className="bg-slate-500/15 text-slate-300 border-slate-500/30">⏳ Awaiting reply</Badge>;
+      case "ai_active":
+      default:
+        return <Badge className="bg-green-500/15 text-green-400 border-green-500/30">🤖 AI Active</Badge>;
+    }
+  };
+
+  const shouldShowThreadPanelMobile = !!selectedThreadId;
 
   const loadDemo = () => {
     setFrom(DEMO_PRESET.from);
@@ -437,46 +595,207 @@ export default function InboundEmailsPage() {
         </div>
       </div>
 
-      {/* Inbound leads queue */}
-      {inboundLeads.length > 0 && (
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-[30%_70%] gap-4">
+        <Card className={cn("min-h-[560px]", shouldShowThreadPanelMobile && "hidden lg:block")}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Inbound Lead Queue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {inboundLeads.map((lead: any) => (
-                <div key={lead.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{lead.contactName}</p>
-                      <p className="text-xs text-muted-foreground">{lead.companyName} · {lead.contactEmail}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={
-                        lead.priority === "hot"
-                          ? "text-red-400 border-red-400/30"
-                          : lead.priority === "warm"
-                          ? "text-amber-400 border-amber-400/30"
-                          : "text-muted-foreground"
-                      }
-                    >
-                      {lead.priority}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">Score: {lead.fitScore}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">Robin&apos;s Inbox</CardTitle>
+              <Badge variant="secondary">{activity.length} active threads</Badge>
             </div>
+          </CardHeader>
+          <CardContent className="pt-0 h-[500px]">
+            {isLoadingActivity ? (
+              <div className="space-y-3 pt-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-2 rounded-lg border border-border p-3">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ScrollArea className="h-full pr-3">
+                <div className="space-y-2">
+                  {activity.map((item) => {
+                    const threadId = item.threadId || item.id;
+                    const isActive = selectedThreadId === threadId;
+                    return (
+                      <button
+                        key={threadId}
+                        className={cn(
+                          "w-full text-left p-3 rounded-lg border transition-colors",
+                          isActive
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:bg-muted/40",
+                        )}
+                        onClick={() => setSelectedThreadId(threadId)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {getInitials(item.senderName, item.senderEmail)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium truncate">
+                                {item.senderName || item.senderEmail || "Unknown sender"}
+                              </p>
+                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                {formatRelativeTime(item.lastActivityAt)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {item.company || item.companyName || "Unknown company"}
+                            </p>
+                            <p className="text-xs truncate text-foreground/80">
+                              {(item.lastMessagePreview || item.snippet || "").slice(0, 60)}
+                            </p>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              {getStatusBadge(item.status)}
+                              <Badge variant="outline">Fit {item.fitScore ?? "-"}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
-      )}
+
+        <Card className={cn("min-h-[560px]", !shouldShowThreadPanelMobile && "hidden lg:block")}>
+          <CardHeader className="pb-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                {shouldShowThreadPanelMobile && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden h-8 w-8"
+                    onClick={() => setSelectedThreadId(null)}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                <div className="min-w-0">
+                  <CardTitle className="text-base truncate">
+                    {selectedThread?.senderName || selectedThread?.senderEmail || "Thread detail"}
+                  </CardTitle>
+                  {selectedThread && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {(selectedThread.company || selectedThread.companyName || "Unknown company") +
+                        " · " +
+                        (selectedThread.senderEmail || "")}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {selectedThread && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">Fit {selectedThread.fitScore ?? "-"}</Badge>
+                  <EngagementBadge score={selectedThread.engagementScore ?? 1} />
+                </div>
+              )}
+            </div>
+            {selectedThread && (
+              <div className="flex flex-wrap gap-2">
+                {(selectedThread.productsAsked || []).map((product) => (
+                  <Badge key={product} variant="outline" className="text-xs">
+                    {product}
+                  </Badge>
+                ))}
+                {selectedThread.intent && (
+                  <Badge className="bg-purple-500/15 text-purple-300 border-purple-500/30 text-xs capitalize">
+                    Intent: {selectedThread.intent}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="pt-0 space-y-4">
+            {!selectedThreadId ? (
+              <div className="h-[460px] flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-lg">
+                ← Select a thread
+              </div>
+            ) : isLoadingThread ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className={cn("h-16 w-3/4", i % 2 === 0 ? "mr-auto" : "ml-auto")} />
+                ))}
+              </div>
+            ) : (
+              <>
+                <ScrollArea className="h-[340px] border rounded-lg p-3">
+                  <div className="space-y-3">
+                    {thread.map((message, index) => {
+                      const isProspect = message.role === "prospect" || (!message.role && index % 2 === 0);
+                      return (
+                        <div
+                          key={message.id || `${message.timestamp || message.createdAt}-${index}`}
+                          className={cn("flex", isProspect ? "justify-start" : "justify-end")}
+                        >
+                          <div
+                            className={cn(
+                              "max-w-[85%] rounded-lg border px-3 py-2",
+                              isProspect
+                                ? "bg-muted/60 border-border text-foreground"
+                                : "bg-primary/15 border-primary/30 text-primary-foreground",
+                            )}
+                          >
+                            <p className="text-[11px] text-muted-foreground mb-1">
+                              {message.from || (isProspect ? "Prospect" : "Robin")} · {message.subject || "(no subject)"}
+                            </p>
+                            <p className="text-sm whitespace-pre-wrap">{message.body || "(empty message)"}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  {selectedThread?.status === "human" ? (
+                    <Button
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+                      onClick={() => takeoverMutation.mutate(false)}
+                      disabled={takeoverMutation.isPending}
+                    >
+                      Resume AI
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-500 text-white"
+                      onClick={() => takeoverMutation.mutate(true)}
+                      disabled={takeoverMutation.isPending}
+                    >
+                      Take Over
+                    </Button>
+                  )}
+                  <Textarea
+                    value={manualReply}
+                    onChange={(e) => setManualReply(e.target.value)}
+                    placeholder="Write a manual reply..."
+                    rows={4}
+                    className="resize-none"
+                  />
+                  <Button
+                    onClick={() => manualReplyMutation.mutate()}
+                    disabled={!manualReply.trim() || manualReplyMutation.isPending}
+                  >
+                    Send Manual Reply
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

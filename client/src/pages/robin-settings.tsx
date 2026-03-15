@@ -63,7 +63,7 @@ export default function RobinSettingsPage() {
 
   const { data: aes = [] } = useQuery<AE[]>({
     queryKey: ["account-executives"],
-    queryFn: () => fetch("/api/ae", { credentials: "include" }).then(r => r.json()),
+    queryFn: () => fetch("/api/account-executives", { credentials: "include" }).then(r => r.json()),
   });
 
   const [localConfig, setLocalConfig] = useState<Partial<RobinConfig>>({});

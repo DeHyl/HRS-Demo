@@ -62,15 +62,16 @@ export async function sendFeedbackEmail(options: EmailOptions): Promise<void> {
   const auth = getAuth();
   const gmail = google.gmail({ version: "v1", auth });
 
-  const headers = [
+  const headerLines = [
     `To: ${options.to}`,
-    options.cc ? `Cc: ${options.cc}` : "",
+    ...(options.cc ? [`Cc: ${options.cc}`] : []),
     `Subject: ${options.subject}`,
     "MIME-Version: 1.0",
     "Content-Type: text/html; charset=utf-8",
-    "",
-    options.body
-  ].filter(Boolean).join("\r\n");
+  ].join("\r\n");
+
+  // MIME requires exactly one blank line between headers and body
+  const headers = `${headerLines}\r\n\r\n${options.body}`;
 
   const encodedMessage = Buffer.from(headers)
     .toString("base64")

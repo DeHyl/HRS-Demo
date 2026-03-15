@@ -182,4 +182,66 @@ export function registerInboundRoutes(app: Express, requireAuth: Function) {
       res.json({ sent: false, reason: "Gmail not configured — reply copied to clipboard" });
     }
   });
+
+  // GET /api/inbound/stats — Robin analytics
+  app.get("/api/inbound/stats", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allMessages = await db.select().from(gmailProcessedMessages).orderBy(desc(gmailProcessedMessages.processedAt));
+
+      // Only count inbound (not Robin's own reply rows)
+      const inbound = allMessages.filter(m => m.fromEmail !== "hawk.gametime@gmail.com");
+      const last7d = inbound.filter(m => new Date(m.processedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+
+      const autoReplied = inbound.filter(m => m.autoReplied).length;
+      const escalated = inbound.filter(m => m.escalated).length;
+      const avgScore = inbound.length > 0
+        ? Math.round(inbound.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / inbound.length * 10) / 10
+        : 0;
+
+      // Daily volume last 14 days
+      const daily: Record<string, { date: string; total: number; escalated: number; autoReplied: number }> = {};
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        daily[key] = { date: key, total: 0, escalated: 0, autoReplied: 0 };
+      }
+      for (const m of inbound) {
+        const key = new Date(m.processedAt).toISOString().slice(0, 10);
+        if (daily[key]) {
+          daily[key].total++;
+          if (m.escalated) daily[key].escalated++;
+          if (m.autoReplied) daily[key].autoReplied++;
+        }
+      }
+
+      // Recent escalations
+      const recentEscalations = inbound
+        .filter(m => m.escalated)
+        .slice(0, 10)
+        .map(m => ({
+          id: m.id,
+          fromName: m.fromName,
+          fromEmail: m.fromEmail,
+          subject: m.subject,
+          engagementScore: m.engagementScore,
+          processedAt: m.processedAt,
+          leadId: m.leadId,
+        }));
+
+      res.json({
+        total: inbound.length,
+        last7d: last7d.length,
+        autoReplied,
+        escalated,
+        avgEngagementScore: avgScore,
+        autoReplyRate: inbound.length > 0 ? Math.round(autoReplied / inbound.length * 100) : 0,
+        escalationRate: inbound.length > 0 ? Math.round(escalated / inbound.length * 100) : 0,
+        dailyVolume: Object.values(daily),
+        recentEscalations,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load stats" });
+    }
+  });
 }

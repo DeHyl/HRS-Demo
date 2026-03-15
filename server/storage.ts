@@ -856,14 +856,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resolveAEForLead(region: string): Promise<AccountExecutive | null> {
+    // Map US states and Canadian provinces to HRS regions
+    const STATE_TO_REGION: Record<string, string> = {
+      CA: "West", OR: "West", WA: "West", NV: "West", AZ: "West",
+      ID: "West", MT: "West", AK: "West", HI: "West", UT: "West", WY: "West", CO: "West",
+      MN: "Central", WI: "Central", IL: "Central", MO: "Central", KS: "Central",
+      ND: "Central", SD: "Central", NE: "Central", IA: "Central", MI: "Central",
+      IN: "Central", OH: "Central",
+      TX: "South", FL: "South", GA: "South", AL: "South", MS: "South",
+      LA: "South", AR: "South", TN: "South", NC: "South", SC: "South",
+      OK: "South", KY: "South", NM: "South",
+      NY: "Northeast", NJ: "Northeast", CT: "Northeast", MA: "Northeast",
+      PA: "Northeast", VA: "Northeast", MD: "Northeast", DC: "Northeast",
+      ME: "Northeast", NH: "Northeast", VT: "Northeast", RI: "Northeast",
+      DE: "Northeast", WV: "Northeast",
+      BC: "Canada", AB: "Canada", SK: "Canada", MB: "Canada",
+      ON: "Canada", QC: "Canada", NS: "Canada", NB: "Canada",
+      PE: "Canada", NL: "Canada",
+    };
+    const normalizedRegion = STATE_TO_REGION[region?.toUpperCase()] || region;
+    const regionLower = normalizedRegion?.toLowerCase() || "";
+
     // 1. Try territory routing table
     const routes = await db
       .select()
       .from(aeTerritoryRouting)
       .where(and(eq(aeTerritoryRouting.isActive, true)))
       .orderBy(aeTerritoryRouting.priority);
-
-    const regionLower = region?.toLowerCase() || "";
     for (const route of routes) {
       if (route.region.toLowerCase() === regionLower && route.aeId) {
         const [ae] = await db.select().from(accountExecutives).where(and(eq(accountExecutives.id, route.aeId), eq(accountExecutives.isActive, true)));

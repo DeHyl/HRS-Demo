@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -98,6 +99,22 @@ export default function InboundEmailsPage() {
       ),
     enabled: !!selectedThreadId,
     refetchInterval: 15000,
+  });
+
+  const { data: stats } = useQuery<{
+    total: number;
+    last7d: number;
+    autoReplied: number;
+    escalated: number;
+    avgEngagementScore: number;
+    autoReplyRate: number;
+    escalationRate: number;
+    dailyVolume: Array<{ date: string; total: number; escalated: number; autoReplied: number }>;
+    recentEscalations: Array<{ id: string; fromName?: string; fromEmail: string; subject?: string; engagementScore?: number; processedAt: string }>;
+  }>({
+    queryKey: ["inbound-stats"],
+    queryFn: () => fetch("/api/inbound/stats", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 60000,
   });
 
   const selectedThread = useMemo(
@@ -225,6 +242,43 @@ export default function InboundEmailsPage() {
           <span className="hidden sm:inline">Refreshes every 30s</span>
         </div>
       </div>
+
+      {/* Robin Analytics Strip */}
+      {stats && (
+        <div className="space-y-3 px-4 py-3 border-b border-border">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { label: "Total Processed", value: stats.total, sub: `${stats.last7d} this week` },
+              { label: "Auto-replied", value: stats.autoReplied, sub: `${stats.autoReplyRate}% rate` },
+              { label: "Escalated", value: stats.escalated, sub: `${stats.escalationRate}% rate` },
+              { label: "Avg Score", value: `${stats.avgEngagementScore}/5`, sub: "engagement" },
+              { label: "Response Rate", value: `${stats.autoReplyRate}%`, sub: "of all inbound" },
+            ].map(({ label, value, sub }) => (
+              <div key={label} className="rounded-lg border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-2xl font-bold mt-1">{value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-medium mb-3">Email Volume — Last 14 Days</p>
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={stats.dailyVolume} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px" }}
+                  labelFormatter={(v: string) => v}
+                />
+                <Bar dataKey="autoReplied" stackId="a" fill="hsl(var(--primary))" name="Auto-replied" />
+                <Bar dataKey="escalated" stackId="a" fill="#f59e0b" name="Escalated" radius={[2,2,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* ── Full-height 2-panel CRM layout ── */}
       <div className="grid grid-cols-[32%_68%] h-[calc(100vh-57px)] overflow-hidden">
@@ -382,7 +436,10 @@ export default function InboundEmailsPage() {
                   <ScrollArea className="h-full p-4">
                     <div className="space-y-3">
                       {thread.map((message, index) => {
-                        const isProspect = message.role === "prospect" || (!message.role && index % 2 === 0);
+                        const isProspect = message.role === "prospect" || 
+                        (message.role !== "ai" && message.role !== "human" && 
+                         !String(message.from || "").includes("hawk.gametime") &&
+                         !String(message.from || "").includes("Robin"));
                         return (
                           <div
                             key={message.id || `${message.timestamp || message.createdAt}-${index}`}

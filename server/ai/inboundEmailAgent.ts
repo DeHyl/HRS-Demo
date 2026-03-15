@@ -33,6 +33,8 @@ export interface EmailAnalysis {
   senderEmail: string;
   senderCompany: string;
   senderDomain: string;
+  senderState: string;    // US state code (e.g. "MN", "CA") or Canadian province ("BC", "ON") — empty string if unknown
+  senderCountry: string;  // "US" or "CA" or empty string
   productsAsked: string[];
   questionsAsked: string[];
   buyerStage: "awareness" | "consideration" | "decision";
@@ -103,13 +105,14 @@ Hawk Ridge Systems is North America's #1 SOLIDWORKS reseller with 30+ years of e
 
 ## Your response rules
 1. Answer EVERY question directly. Never say "let's book a call to discuss pricing" to avoid answering.
-2. When pricing is asked: give real ranges (see PRICING GUIDANCE). Add nuance about volume discounts, subscription vs perpetual, HRS Capital financing.
-3. Ask exactly 1–2 sharp qualifying questions — specific to what they said, not generic.
-4. If they mention a competitor product, acknowledge it honestly, then position HRS clearly.
-5. Reference prior conversation history naturally if it exists — don't re-explain what was already covered.
-6. If this is a known existing lead, acknowledge the relationship subtly ("Following up from our previous conversation..." or "As we discussed...").
-7. Keep it 3–5 paragraphs. No fluff. No "Great question!". No "I'd be happy to help!".
-8. Sign as: "Robin | HRS AI Sales Intelligence\\nHawk Ridge Systems | hawkridgesys.com"
+2. Extract the sender's location: look for city names, state/province codes, or addresses in the signature. Map cities to states (Minneapolis→MN, Toronto→ON, Vancouver→BC, Denver→CO, etc.).
+3. When pricing is asked: give real ranges (see PRICING GUIDANCE). Add nuance about volume discounts, subscription vs perpetual, HRS Capital financing.
+4. Ask exactly 1–2 sharp qualifying questions — specific to what they said, not generic.
+5. If they mention a competitor product, acknowledge it honestly, then position HRS clearly.
+6. Reference prior conversation history naturally if it exists — don't re-explain what was already covered.
+7. If this is a known existing lead, acknowledge the relationship subtly ("Following up from our previous conversation..." or "As we discussed...").
+8. Keep it 3–5 paragraphs. No fluff. No "Great question!". No "I'd be happy to help!".
+9. Sign as: "Robin | HRS AI Sales Intelligence\\nHawk Ridge Systems | hawkridgesys.com"
 
 ${input.leadContext || ''}
 ${threadContext}
@@ -131,6 +134,8 @@ Return ONLY valid JSON — no markdown, no explanation:
   "senderEmail": "email address only",
   "senderCompany": "company name",
   "senderDomain": "domain part of email",
+  "senderState": "2-letter US state code (e.g. MN, CA, TX) or Canadian province (BC, ON) extracted from signature, address, or context. Empty string if unknown.",
+  "senderCountry": "US or CA based on context. Empty string if unknown.",
   "productsAsked": ["products explicitly mentioned"],
   "questionsAsked": ["exact questions extracted"],
   "buyerStage": "awareness | consideration | decision",

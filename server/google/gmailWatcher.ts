@@ -298,7 +298,7 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
     // Trigger AE handoff — resolve AE from territory routing
     if (analysis.escalateToHuman) {
       try {
-        const senderRegion = (analysis as any).senderState || (analysis as any).senderRegion || "";
+        const senderRegion = analysis.senderState || analysis.senderCountry || "";
         const ae = await storage.resolveAEForLead(senderRegion);
         const aeEmail = ae?.email || process.env.HRS_AE_EMAIL || "";
         if (aeEmail) {
@@ -329,6 +329,22 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
         escalated: analysis.escalateToHuman,
         engagementScore: analysis.engagementScore,
       });
+
+      // Also log Robin's reply as a separate row so the thread detail UI shows the conversation
+      if (autoReplied && analysis.suggestedResponse) {
+        await db.insert(gmailProcessedMessages).values({
+          messageId: `robin-reply-${messageId}`,
+          fromEmail: "hawk.gametime@gmail.com",
+          fromName: "Robin (HRS AI)",
+          subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
+          leadId: lead?.id || null,
+          replyBody: analysis.suggestedResponse,
+          threadId: msg.threadId || null,
+          autoReplied: false,
+          escalated: false,
+          engagementScore: null,
+        });
+      }
     } catch (_) {
       // Non-fatal — in-memory set already prevents duplicates
     }

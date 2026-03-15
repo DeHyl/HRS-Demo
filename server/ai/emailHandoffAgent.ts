@@ -8,23 +8,15 @@
 import { callClaudeWithRetry } from "./claudeClient.js";
 import { sendFeedbackEmail } from "../google/gmailClient.js";
 import { EmailAnalysis } from "./inboundEmailAgent.js";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function loadHandoffTemplate(): Promise<string> {
+  // 1. Check DB first (editable from Robin Settings UI)
   try {
     const { storage } = await import("../storage.js");
     const config = await storage.getRobinConfig();
     if (config?.handoffTemplate) return config.handoffTemplate;
   } catch {}
-  // Fall back to file
-  const templatePath = path.resolve(__dirname, "../../config/handoff-template.md");
-  try {
-    return fs.readFileSync(templatePath, "utf-8");
-  } catch {}
+  // 2. Fall back to built-in default
   return DEFAULT_HANDOFF_TEMPLATE;
 }
 

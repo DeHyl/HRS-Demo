@@ -13,6 +13,7 @@
 import { google } from "googleapis";
 import { analyzeInboundEmail } from "../ai/inboundEmailAgent.js";
 import { sendFeedbackEmail } from "./gmailClient.js";
+import { sendHandoffToAE } from "../ai/emailHandoffAgent.js";
 import { storage } from "../storage.js";
 import { db } from "../db.js";
 import { gmailProcessedMessages } from "@shared/schema";
@@ -181,6 +182,27 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
   const rawBody = extractBody(msg.payload);
   const body = stripReplyQuotes(rawBody);
 
+  // Fetch prior messages in this thread for context
+  let priorMessages: Array<{ from: string; body: string; date: string }> = [];
+  if (msg.threadId) {
+    try {
+      const threadRes = await gmail.users.threads.get({ userId: "me", id: msg.threadId, format: "full" });
+      const threadMsgs = threadRes.data.messages || [];
+      // All messages except the current one (last in thread)
+      for (const tm of threadMsgs.slice(0, -1)) {
+        const tmHeaders = tm.payload?.headers || [];
+        const tmFrom = getHeader(tmHeaders, "from");
+        const tmDate = getHeader(tmHeaders, "date");
+        const tmBody = stripReplyQuotes(extractBody(tm.payload));
+        if (tmBody && tmBody.length > 10) {
+          priorMessages.push({ from: tmFrom, body: tmBody.slice(0, 800), date: tmDate });
+        }
+      }
+    } catch (_) {
+      // Non-fatal — proceed without thread history
+    }
+  }
+
   if (!body || body.length < 20) {
     console.log(`[GmailWatcher] Skipping short/empty email from ${from}`);
     return;
@@ -205,8 +227,15 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
   console.log(`[GmailWatcher] 📨 New email from ${from} — "${subject}"`);
 
   try {
+    // Look up existing lead BEFORE AI analysis (to pass as context)
+    const priorLead = await storage.getLeadByEmail(
+      // Extract email from "From" header quickly
+      (from.match(/<([^>]+)>/) || [, from])[1]?.trim().toLowerCase() || ''
+    );
+    const leadContext = priorLead ? `\nEXISTING LEAD: ${priorLead.contactName} at ${priorLead.companyName} — first contacted ${priorLead.createdAt ? new Date(priorLead.createdAt).toLocaleDateString() : 'previously'}, status: ${priorLead.status}, priority: ${priorLead.priority}. Prior notes: ${priorLead.notes || 'none'}.` : '';
+
     // Run through Inbound Email Agent
-    const analysis = await analyzeInboundEmail({ from, subject, body });
+    const analysis = await analyzeInboundEmail({ from, subject, body, priorMessages, leadContext });
 
     if (!analysis.senderEmail) {
       console.log(`[GmailWatcher] Couldn't extract email from "${from}", skipping`);
@@ -214,8 +243,8 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
     }
 
     // Deduplicate lead by email
-    let lead = await storage.getLeadByEmail(analysis.senderEmail);
-    let isNewLead = false;
+    let lead = priorLead || null;
+    let isNewLead = !lead;
 
     if (!lead) {
       const priority =
@@ -234,22 +263,42 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
         priority,
         notes: `[Auto] Inbound email: ${subject}`,
       });
-      isNewLead = true;
     }
 
     let autoReplied = false;
 
     // Send AI-drafted reply
-    if (analysis.suggestedResponse && !analysis.escalateToHuman) {
+    if (analysis.suggestedResponse) {
+      // Always reply — even for escalations (Robin adds a handoff note when escalating)
+      const bodyToSend = analysis.escalateToHuman
+        ? `${analysis.suggestedResponse}\n\n---\n(Note: Based on your inquiry, one of our HRS account executives will also be in touch shortly to discuss next steps.)`
+        : analysis.suggestedResponse;
+
       await sendFeedbackEmail({
         to: analysis.senderEmail,
         subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
-        body: analysis.suggestedResponse.replace(/\n/g, "<br>"),
+        body: bodyToSend.replace(/\n/g, "<br>"),
       });
       autoReplied = true;
-      console.log(`[GmailWatcher] ✅ Auto-replied to ${analysis.senderEmail} (lead ${isNewLead ? "created" : "existing"})`);
-    } else if (analysis.escalateToHuman) {
-      console.log(`[GmailWatcher] 🚨 Escalating to human: ${analysis.escalationReason}`);
+      if (analysis.escalateToHuman) {
+        console.log(`[GmailWatcher] 🚨 Escalation flagged — replied + notified: ${analysis.escalationReason}`);
+      } else {
+        console.log(`[GmailWatcher] ✅ Auto-replied to ${analysis.senderEmail} (lead ${isNewLead ? "created" : "existing"})`);
+      }
+    }
+
+    // Trigger AE handoff for high-engagement leads
+    if (analysis.escalateToHuman && process.env.HRS_AE_EMAIL) {
+      try {
+        await sendHandoffToAE({
+          analysis,
+          subject,
+          priorMessages,
+          aeEmail: process.env.HRS_AE_EMAIL,
+        });
+      } catch (handoffErr) {
+        console.error("[GmailWatcher] Handoff email failed:", handoffErr instanceof Error ? handoffErr.message : handoffErr);
+      }
     }
 
     // Log in DB

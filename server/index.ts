@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { startGmailWatcher } from "./google/gmailWatcher.js";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
+import robinConfigRouter from "./robin-config-routes.js";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupDashboardWebSocket } from "./dashboardUpdates";
@@ -103,6 +104,8 @@ app.use((req, res, next) => {
   const { storage } = await import("./storage");
   await storage.initializeNavigationSettings();
   
+  app.use("/api/robin", robinConfigRouter);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

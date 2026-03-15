@@ -13,10 +13,13 @@ import {
   type Notification, type InsertNotification,
   type NavigationSetting,
   type PasswordResetToken,
+  type RobinConfig, type InsertRobinConfig,
+  type AeTerritoryRouting, type InsertAeTerritoryRouting,
   users, managers, sdrs, leads, 
   liveCoachingSessions, liveCoachingTips, liveTranscripts, researchPackets,
   callSessions, managerCallAnalyses, accountExecutives, notifications, navigationSettings,
-  passwordResetTokens
+  passwordResetTokens,
+  robinConfig, aeTerritoryRouting
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, isNotNull, desc, inArray, sql, lt } from "drizzle-orm";
@@ -813,6 +816,75 @@ export class DatabaseStorage implements IStorage {
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     await db.delete(passwordResetTokens)
       .where(lt(passwordResetTokens.expiresAt, new Date()));
+  }
+
+  // ─── Robin Config ────────────────────────────────────────────────────────
+  async getRobinConfig(): Promise<RobinConfig | null> {
+    const [config] = await db.select().from(robinConfig).where(eq(robinConfig.id, "default"));
+    return config || null;
+  }
+
+  async upsertRobinConfig(data: Partial<InsertRobinConfig>): Promise<RobinConfig> {
+    const [result] = await db
+      .insert(robinConfig)
+      .values({ id: "default", ...data })
+      .onConflictDoUpdate({ target: robinConfig.id, set: { ...data, updatedAt: new Date() } })
+      .returning();
+    return result;
+  }
+
+  // ─── AE Territory Routing ────────────────────────────────────────────────
+  async getAeTerritoryRouting(): Promise<AeTerritoryRouting[]> {
+    return db.select().from(aeTerritoryRouting).orderBy(aeTerritoryRouting.priority);
+  }
+
+  async upsertAeTerritoryRoute(data: InsertAeTerritoryRouting & { id?: string }): Promise<AeTerritoryRouting> {
+    if (data.id) {
+      const [result] = await db
+        .update(aeTerritoryRouting)
+        .set(data)
+        .where(eq(aeTerritoryRouting.id, data.id))
+        .returning();
+      return result;
+    }
+    const [result] = await db.insert(aeTerritoryRouting).values(data).returning();
+    return result;
+  }
+
+  async deleteAeTerritoryRoute(id: string): Promise<void> {
+    await db.delete(aeTerritoryRouting).where(eq(aeTerritoryRouting.id, id));
+  }
+
+  async resolveAEForLead(region: string): Promise<AccountExecutive | null> {
+    // 1. Try territory routing table
+    const routes = await db
+      .select()
+      .from(aeTerritoryRouting)
+      .where(and(eq(aeTerritoryRouting.isActive, true)))
+      .orderBy(aeTerritoryRouting.priority);
+
+    const regionLower = region?.toLowerCase() || "";
+    for (const route of routes) {
+      if (route.region.toLowerCase() === regionLower && route.aeId) {
+        const [ae] = await db.select().from(accountExecutives).where(and(eq(accountExecutives.id, route.aeId), eq(accountExecutives.isActive, true)));
+        if (ae) return ae;
+      }
+    }
+
+    // 2. Try matching account_executives.region directly
+    const allAes = await db.select().from(accountExecutives).where(eq(accountExecutives.isActive, true));
+    const match = allAes.find(ae => ae.region && ae.region.toLowerCase() === regionLower);
+    if (match) return match;
+
+    // 3. Fallback: check robin_config.fallback_ae_id
+    const config = await this.getRobinConfig();
+    if (config?.fallbackAeId) {
+      const [ae] = await db.select().from(accountExecutives).where(eq(accountExecutives.id, config.fallbackAeId));
+      if (ae) return ae;
+    }
+
+    // 4. Final fallback: any active AE
+    return allAes[0] || null;
   }
 }
 

@@ -685,3 +685,34 @@ export const insertGmailProcessedMessageSchema = createInsertSchema(gmailProcess
 export type InsertGmailProcessedMessage = z.infer<typeof insertGmailProcessedMessageSchema>;
 
 export type GmailProcessedMessage = typeof gmailProcessedMessages.$inferSelect;
+
+// ─── Robin Agent Configuration ────────────────────────────────────────────────
+export const robinConfig = pgTable("robin_config", {
+  id: text("id").primaryKey().default("default"),
+  escalationScoreThreshold: integer("escalation_score_threshold").default(4).notNull(),
+  escalateOnBudget: boolean("escalate_on_budget").default(true).notNull(),
+  escalateOnDeadline: boolean("escalate_on_deadline").default(true).notNull(),
+  escalateOnDemo: boolean("escalate_on_demo").default(true).notNull(),
+  autoReplyOnEscalation: boolean("auto_reply_on_escalation").default(true).notNull(),
+  escalationNote: text("escalation_note").default("Based on your inquiry, one of our HRS account executives will also be in touch shortly to discuss next steps."),
+  handoffTemplate: text("handoff_template"),
+  fallbackAeId: text("fallback_ae_id").references(() => accountExecutives.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRobinConfigSchema = createInsertSchema(robinConfig).omit({ updatedAt: true });
+export type RobinConfig = typeof robinConfig.$inferSelect;
+export type InsertRobinConfig = z.infer<typeof insertRobinConfigSchema>;
+
+export const aeTerritoryRouting = pgTable("ae_territory_routing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  region: text("region").notNull(),
+  aeId: text("ae_id").references(() => accountExecutives.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  priority: integer("priority").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAeTerritoryRoutingSchema = createInsertSchema(aeTerritoryRouting).omit({ id: true, createdAt: true });
+export type AeTerritoryRouting = typeof aeTerritoryRouting.$inferSelect;
+export type InsertAeTerritoryRouting = z.infer<typeof insertAeTerritoryRoutingSchema>;

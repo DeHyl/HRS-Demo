@@ -14,7 +14,8 @@ import {
   Activity,
   TrendingUp,
   Map,
-  Inbox
+  Inbox,
+  Bot
 } from "lucide-react";
 import {
   Sidebar,
@@ -108,6 +109,11 @@ const settingsNavItems = [
     title: "Settings",
     url: "/settings",
     icon: Settings,
+  },
+  {
+    title: "Robin Settings",
+    url: "/robin-settings",
+    icon: Bot,
   },
 ];
 

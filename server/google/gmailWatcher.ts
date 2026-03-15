@@ -234,8 +234,16 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
     );
     const leadContext = priorLead ? `\nEXISTING LEAD: ${priorLead.contactName} at ${priorLead.companyName} — first contacted ${priorLead.createdAt ? new Date(priorLead.createdAt).toLocaleDateString() : 'previously'}, status: ${priorLead.status}, priority: ${priorLead.priority}. Prior notes: ${priorLead.notes || 'none'}.` : '';
 
+    // Load robin config (escalation rules)
+    const robinCfg = await storage.getRobinConfig().catch(() => null);
+    const scoreThreshold = robinCfg?.escalationScoreThreshold ?? 4;
+    const escalateOnBudget = robinCfg?.escalateOnBudget ?? true;
+    const escalateOnDeadline = robinCfg?.escalateOnDeadline ?? true;
+    const escalateOnDemo = robinCfg?.escalateOnDemo ?? true;
+    const escalationNote = robinCfg?.escalationNote ?? "Based on your inquiry, one of our HRS account executives will also be in touch shortly to discuss next steps.";
+
     // Run through Inbound Email Agent
-    const analysis = await analyzeInboundEmail({ from, subject, body, priorMessages, leadContext });
+    const analysis = await analyzeInboundEmail({ from, subject, body, priorMessages, leadContext, escalationRules: { scoreThreshold, escalateOnBudget, escalateOnDeadline, escalateOnDemo } });
 
     if (!analysis.senderEmail) {
       console.log(`[GmailWatcher] Couldn't extract email from "${from}", skipping`);
@@ -271,7 +279,7 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
     if (analysis.suggestedResponse) {
       // Always reply — even for escalations (Robin adds a handoff note when escalating)
       const bodyToSend = analysis.escalateToHuman
-        ? `${analysis.suggestedResponse}\n\n---\n(Note: Based on your inquiry, one of our HRS account executives will also be in touch shortly to discuss next steps.)`
+        ? `${analysis.suggestedResponse}\n\n---\n(Note: ${escalationNote})`
         : analysis.suggestedResponse;
 
       await sendFeedbackEmail({
@@ -287,17 +295,23 @@ async function processMessage(gmail: any, messageId: string): Promise<void> {
       }
     }
 
-    // Trigger AE handoff for high-engagement leads
-    if (analysis.escalateToHuman && process.env.HRS_AE_EMAIL) {
+    // Trigger AE handoff — resolve AE from territory routing
+    if (analysis.escalateToHuman) {
       try {
-        await sendHandoffToAE({
-          analysis,
-          subject,
-          priorMessages,
-          aeEmail: process.env.HRS_AE_EMAIL,
-        });
+        const senderRegion = (analysis as any).senderState || (analysis as any).senderRegion || "";
+        const ae = await storage.resolveAEForLead(senderRegion);
+        const aeEmail = ae?.email || process.env.HRS_AE_EMAIL || "";
+        if (aeEmail) {
+          await sendHandoffToAE({
+            analysis,
+            subject,
+            priorMessages,
+            aeEmail,
+            aeName: ae?.name,
+          });
+        }
       } catch (handoffErr) {
-        console.error("[GmailWatcher] Handoff email failed:", handoffErr instanceof Error ? handoffErr.message : handoffErr);
+        console.error("[GmailWatcher] Handoff failed:", handoffErr instanceof Error ? handoffErr.message : handoffErr);
       }
     }
 

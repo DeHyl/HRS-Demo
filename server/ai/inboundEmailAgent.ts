@@ -20,6 +20,12 @@ export interface InboundEmailInput {
   receivedAt?: Date;
   priorMessages?: Array<{ from: string; body: string; date: string }>;
   leadContext?: string;
+  escalationRules?: {
+    scoreThreshold: number;
+    escalateOnBudget: boolean;
+    escalateOnDeadline: boolean;
+    escalateOnDemo: boolean;
+  };
 }
 
 export interface EmailAnalysis {
@@ -136,7 +142,7 @@ Return ONLY valid JSON — no markdown, no explanation:
   "escalationReason": "reason only if escalateToHuman is true"
 }
 
-Escalate when: engagementScore >= 4, OR explicit budget mentioned, OR specific decision deadline, OR request for formal quote/demo.`;
+Escalate when: engagementScore >= ${(input.escalationRules?.scoreThreshold ?? 4)}${input.escalationRules?.escalateOnBudget ?? true ? ', OR explicit budget mentioned' : ''}${input.escalationRules?.escalateOnDeadline ?? true ? ', OR specific decision deadline' : ''}${input.escalationRules?.escalateOnDemo ?? true ? ', OR request for formal quote/demo' : ''}.`;
 
   const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",

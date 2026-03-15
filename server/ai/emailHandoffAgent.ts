@@ -14,13 +14,18 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function loadHandoffTemplate(): string {
+async function loadHandoffTemplate(): Promise<string> {
+  try {
+    const { storage } = await import("../storage.js");
+    const config = await storage.getRobinConfig();
+    if (config?.handoffTemplate) return config.handoffTemplate;
+  } catch {}
+  // Fall back to file
   const templatePath = path.resolve(__dirname, "../../config/handoff-template.md");
   try {
     return fs.readFileSync(templatePath, "utf-8");
-  } catch {
-    return DEFAULT_HANDOFF_TEMPLATE;
-  }
+  } catch {}
+  return DEFAULT_HANDOFF_TEMPLATE;
 }
 
 const DEFAULT_HANDOFF_TEMPLATE = `# HRS Lead Handoff — {{contactName}} at {{companyName}}
@@ -65,10 +70,11 @@ export interface HandoffInput {
   subject: string;
   priorMessages?: Array<{ from: string; body: string; date: string }>;
   aeEmail: string;
+  aeName?: string;
 }
 
 export async function sendHandoffToAE(input: HandoffInput): Promise<void> {
-  const { analysis, subject, priorMessages = [], aeEmail } = input;
+  const { analysis, subject, priorMessages = [], aeEmail, aeName } = input;
 
   // Use Claude to extract BANT and generate summary
   const extractionPrompt = `You are summarizing a sales lead for an Account Executive handoff at Hawk Ridge Systems.
@@ -109,7 +115,7 @@ Return JSON only:
     };
   }
 
-  const template = loadHandoffTemplate();
+  const template = await loadHandoffTemplate();
   const threadHistory = priorMessages.length > 0
     ? priorMessages.map(m => `[${m.date}] ${m.from}:\n${m.body}`).join("\n\n---\n\n")
     : "(first contact — no prior thread)";

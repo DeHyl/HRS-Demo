@@ -34,6 +34,7 @@ import AMWorkspacePage from "@/pages/am-workspace";
 import InboundEmailsPage from "@/pages/inbound-emails";
 import BudgetingPage from "@/pages/budgeting";
 import SettingsPage from "@/pages/settings";
+import RobinSettingsPage from "@/pages/robin-settings";
 import LearningPage from "@/pages/learning";
 
 function LoadingScreen() {
@@ -301,6 +302,14 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <SettingsPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/robin-settings">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <RobinSettingsPage />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
